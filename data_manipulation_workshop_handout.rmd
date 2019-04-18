@@ -1,0 +1,1268 @@
+---
+title: "Data manipulation in R"
+date:  April 25, 2019
+output:
+ pdf_document:
+  toc: true
+  toc_depth: 4
+urlcolor: blue
+---
+
+```{r setup, include = FALSE, message = FALSE}
+options(width = 100)
+library(knitr)
+opts_chunk$set(comment = NA, tidy = FALSE, dev = "pdf")
+```
+
+# Introduction and background
+
+Today we are going to be learning how to perform basic data manipulation tasks in R.  While there are many options for tackling data manipulation problems in R (e.g., `apply` family, **data.table** package, functions `ave()` and `aggregate()`), we will be working with the **dplyr** and **tidyr** packages today.  I find that these packages are approachable for people without a lot of programming background but are still quite fast when working with large datasets.
+
+In this workshop, we will cover the following:
+
+- Making summary datasets by group
+- Filtering the dataset to include only rows that satisfy certain conditions
+- Selecting only some columns/variables in a dataset
+- Adding new variables/columns
+- Sorting datasets based on variables
+- Reshaping datasets
+- Merging or *joining* two datasets
+
+The workshop is broken up into three parts:
+
+> In Part 1, we'll review functions from **dplyr** for basic data manipulation/munging/cleaning.  We end with a chance for you to practice some of the functions we covered.  
+
+> In Part 2, you'll be introduced to the concept of *reshaping* datasets via **tidyr** functions. We'll do another practice exercise at the end of this section.
+
+> In Part 3 we'll practice joining datasets using the `join` functions from **dplyr**.  
+
+
+## Where to find help
+
+It is important to know where to go for help when you run into data manipulation problems.  The first place to start is the help pages for the functions themselves; too often folks skip this step and end up in a time-consuming search that could have been avoided.  Another place that I often go to find help is on the Stack Overflow website: http://stackoverflow.com/questions/tagged/r.  I've given you the link to questions that are specifically R programming questions.  You could also look for questions tagged with **dplyr** or **tidyr** or search all R-related questions using keywords or phrases.
+
+The newer RStudio Community website, https://community.rstudio.com/, is another place to look for and ask for help that can be less intimidating than Stack Overflow.
+
+Both of these packages are fairly young, and while they are stabilizing, some elements of the packages may still change.   Functions we are using today, however, are functions that are already stable and likely won't change much through time.  
+
+Both packages have introductory vignettes that are useful.  
+
+The **Introduction to dplyr** vignette is updated as **dplyr** is updated, and is nice resource: https://cran.r-project.org/web/packages/dplyr/vignettes/dplyr.html.  
+
+Also see the **Tidy data** vignette for some examples using **tidyr**: https://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html.
+
+The RStudio cheat sheets may also be helpful: https://www.rstudio.com/resources/cheatsheets/
+
+## Getting started
+
+### Check package version
+
+The current version of **dplyr** is 0.8.0.1 and the current version of **tidyr** is 0.8.3.  
+We can use `packageVersion` to check for the currently installed version of a package, to make sure we are using the current versions.
+
+```{r packagevers}
+packageVersion("dplyr")
+packageVersion("tidyr")
+```
+
+If one of these packages isn't up to date, you need to re-install it.  You can install via coding using, e.g., `install.packages("tidyr")` or via the RStudio Packages pane Install button.  Remember that you do not need to install a package every time you use it, so don't make this code part of a script.
+
+In between version releases, bugs are fixed and new issues addressed in the *development version* of a package.  For these two packages, you can see the changes, check for known issues, and download the current development version via their github repositories.  For **dplyr** see  https://github.com/tidyverse/dplyr and for **tidyr** see https://github.com/tidyverse/tidyr.
+
+### Load packages
+
+If all packages are up-to-date, we can load **dplyr** and **tidyr** and get started.
+
+```{r, message = FALSE}
+library(dplyr)
+library(tidyr)
+```
+
+### The `mtcars` dataset
+
+In the first part of the workshop we will be using the `mtcars` dataset to practice data manipulation.  This dataset comes with R, and information about this dataset is available in the R help files for the dataset (`?mtcars`).
+
+We will be using both categorical and continuous variables from this dataset, including, `mpg` (Miles per US gallon), `wt` (car weight in 1000 lbs), `cyl` (number of cylinders), `am` (type of transmission), `disp` (engine displacement), `qsec` (quarter mile time), and `hp` (horsepower).    
+
+Let's take a quick look at the first six lines (with `head()`) and structure (with `str()`) of this dataset.  You should recognize that `cyl` and `am` (as well as others like `vs`) are categorical variables but that they are considered numeric variables in the dataset since the categories are expressed with numbers.
+
+```{r}
+head(mtcars)
+str(mtcars)
+```
+
+# Part 1: Functions for basic data manipulation
+
+## Calculating summary statistics by group
+
+We're going to start out today by learning how to calculate summary statistics by group.  I start here because this is common task that I see folks struggle with in R.  The task of calculating summaries by groups in R is referred to as a *split-apply-combine* task because we want to split the dataset into groups, apply a function to each split, and then combine the results back into a single dataset.  
+
+There are a variety of ways to perform such tasks in R.  We will be using **dplyr** functions in this workshop but in the long run you may find you like the style of another method better.
+
+### Using the `group_by()` function
+
+With **dplyr**, the key to split-apply-combine tasks is *grouping*.  We need to define which variable contains the groups that we want to summarize separately.  We create a grouped dataset using the `group_by()` function.  
+
+Let's create a grouped dataset named `bycyl`, where we group `mtcars` by the `cyl` variable.  The `cyl` variable is a categorical variable representing the number of cylinders a car has.  This variable has 3 different levels, `4`, `6`, and `8`.
+
+```{r group}
+bycyl = group_by(mtcars, cyl)
+```
+
+We can see that the new object is a grouped dataset if we print the `head` of the dataset and see the `Groups` tag or see the class `grouped_df` in the object structure.
+
+```{r}
+head(bycyl)
+str(bycyl)
+```
+
+### Using the `summarise()` function
+
+Now that we have a grouped dataset, we can use it with the `summarise()` function to calculate summary statistics by group (`summarize()` is an alternative spelling for the same function).  
+
+We'll start by calculating the mean engine displacement for each cylinder category.  We will be working on the grouped dataset `bycyl` as we want summaries by groups.
+
+Notice that the first argument of `summarise()` is the dataset we want summarized.  This is true for most of the **dplyr** functions.  We list the summary function and variable we want summarized as the second argument.
+
+```{r summarise}
+summarise( bycyl, mean(disp) )
+```
+
+Notice that we printed the summarized dataset to the R Console but did not name the resulting object.  This is what we will be doing for most of the workshop, as my goal is to show you what happens to the dataset after we manipulate it.  You certainly can (and likely will want to) name your final datasets.  We'll see some examples of naming the new objects once we are doing multiple data manipulations tasks at one time.
+
+### Summarizing multiple variables in `summarise()`
+
+We can summarize multiple variables or use different summary functions at once in `summarise()` by using commas to separate each new function/variable.  
+
+For example, we can calculate the mean of engine displacement and horsepower by cylinder category in the same function call.
+
+```{r}
+summarise( bycyl, mean(disp), mean(hp) )
+```
+
+### Naming the variables in `summarise()`
+
+The default names for the new variables we've been calculating are sufficient for a quick summary but are not particularly convenient if we wanted to use the result for anything further in R.  We can  set variable names as we summarize.  
+
+Let's calculate the mean and standard deviation of engine displacement by cylinder category and name the new variables `mdisp` and `sdisp`, respectively.
+
+```{r}
+summarise( bycyl, mdisp = mean(disp), sdisp = sd(disp) )
+```
+
+### Grouping a dataset by multiple variables
+
+Datasets can be grouped by multiple variables as well as by a single variable.  This is common for studies with multiple factors of interest or with nested studies designs (e.g., plots nested in transects nested in sites). 
+
+Let's group `mtcars` by both `cyl` and `am` (transmission type) and then calculate the mean engine displacement.  In the output you can see we calculated mean engine displacement for every factor combination, for a total of six rows (3 `cyl` categories and 2 `am` categories).
+
+```{r}
+byam.cyl = group_by(mtcars, cyl, am)
+
+summarise( byam.cyl, mdisp = mean(disp) )
+```
+
+### Ungrouping a dataset
+
+Looking at our last result, we can see the dataset is still grouped by the `cyl` variable (i.e., `cyl` is listed in "Groups").  If we are finished with our data manipulation it is best practice to *ungroup* the dataset.  Trying to work with a dataset that is grouped when we don't want it to be can lead to unusual behavior.  It is "safest" to make sure the final version of a dataset is ungrouped.
+
+Ungrouping is done via the `ungroup()` function.  Notice we no longer have any `Groups` listed in the output once we do this, as the result is no longer grouped by any variables.
+
+```{r ungroup}
+ungroup( summarise( byam.cyl, mdisp = mean(disp) ) )
+```
+
+### Summarizing multiple variables at once
+
+When we want to summarize many variables in a dataset using the same function, we can use one of the *scoped variants* of `summarise()`.  The scoped variants are `summarise_all()`, `summarise_at()`, and `summarise_if()`.
+
+#### `summarise_all()`
+
+The `summarise_all()` function is useful when we want to summarize every non-grouping variable in the dataset with the same function.  We give the function we want to use for the summaries as the second argument.  
+
+Let's see how `summarise_all()` works by calculating the mean of every variable in `mtcars` for each cylinder category.
+
+```{r}
+summarise_all(bycyl, mean)
+```
+
+Note that we need to be careful with `summarise_all()`.  We could have problems if trying to summarize both continuous and categorical variables in a single dataset and could end up with an error.  All the variables in `mtcars` are currently numeric.  What would happen if we made one of the variables a factor and tried to take the mean of every variable?  
+
+```{r}
+mtcars$vs = factor(mtcars$vs)
+```
+
+R still does the averaging, but returns `NA` and warning messages for the `vs` column.
+
+```{r}
+summarise_all(bycyl, mean)
+```
+
+#### `summarise_at()`
+
+We won't always want to summarize every column in a dataset, for reasons including having a mix of variable types.  One option to only summarize some of the variables is to use `summarise_at()`, where we can list a subset of the columns that we want summaries for by name.
+
+If you look at the help page, you can see that we list the variables we want to summarize within `vars` as the second argument before defining the function we want summarize with.
+
+```{r}
+summarise_at(bycyl, vars(disp, wt), mean)
+```
+
+We can also drop out the variables we don't want summarized rather than writing out the ones we do want.  For example, while all the variables in `mtcars` are read as numeric, some are actually categorical.  If we don't want to treat them as continuous, we can drop them from the summary.  Let's drop `am` and `vs` from our summary.  We can do this by using the minus sign with the variable names inside `vars`.  
+
+We will talk more about selecting and dropping specific variables later today when we talk about the `select()` function.
+
+```{r}
+summarise_at(bycyl, vars(-am, -vs), mean)
+```
+
+####`summarise_if()`
+
+If we want to choose the columns we want to summarize using a logical *predicate* function, we can use `summarise_if()`.  You can see on the help page that the predicate function is the second argument, followed by the summary functions.
+
+Here, we'll only summarize the numeric variables by using the predicate function `is.numeric()`.  Using this, R checks if a column is numeric with `is.numeric()` and if the result is `TRUE` a summary of the column is made.  If the result is `FALSE`, the variable is dropped from the output.
+
+In this example, all variables except `vs` are numeric and will be summarized.
+
+```{r}
+summarise_if(bycyl, is.numeric, mean)
+```
+
+### Summarizing many variables using multiple functions
+
+If we want to summarize many variables with multiple functions, we pass all the functions we want to the `.funs` argument in a `list()`.  The functions are listed with commas between them.
+
+For example, maybe we want to calculate both the mean and the maximum for all numeric variables by group.  The functions we use are `mean` and `max`.  
+
+While the only example we see today is using `summarise_if`, this can be done in any of the `summarise_*` functions.
+
+```{r}
+summarise_if( bycyl, is.numeric, .funs = list(mean, max) )
+```
+
+Notice that we get `fn1` and `fn2` appended to the variable name when using multiple functions.  This is a slight regression in the current version of **dplyr**.  In the next version the names of the functions will be appended to each variable name.
+
+Regardless, to control what name is appended you can assign names to each function within the `list()`.
+
+```{r}
+summarise_if( bycyl, is.numeric, .funs = list(mn = mean, mx = max) )
+```
+
+### The `glimpse()` function for checking wide datasets
+
+The **dplyr** package truncates how much of the dataset we see printed into the R Console.  For very wide datasets like the one we just created, we can get a better idea of what the result looks like using `glimpse()`.
+
+```{r}
+glimpse( summarise_if( bycyl, is.numeric, 
+                       .funs = list(mn = mean, mx = max) ) )
+```
+
+## Filtering datasets with `filter()`
+
+Now we will cover functions for other common data manipulation tasks, starting with *filtering*.  Filtering is about how many rows we want in the dataset, not about the number of columns.  It involves making specific subsets of your data by removing unwanted rows.  Rows to keep are chosen based on *logical conditions*.
+
+For example, maybe we want to focus on a subset of the dataset that only involves cars with automatic transmissions.  We can do this with the `filter()` function to *filter* the `mtcars` dataset to only those rows where `am` is `0`.  
+
+Like other **dplyr** functions, the dataset is the first argument in `filter()`. The subsequent arguments are the conditions that the filtered dataset should meet.  Here, the condition is that cars must have automatic transmissions, or `am == 0` (note the *two* equals signs).
+
+```{r filter}
+filter(mtcars, am == 0)
+```
+
+The `filter()` function will always be used with logical operators such as `==` (testing for equality), `!=` (testing for inequality), `<` (less than), `is.na` (all `NA` values), `!is.na` (all values except `NA`), `>=` (greater than or equal to), etc.
+
+If we wanted to filter out all cars that weigh more than 4000 lbs (i.e., 4 1000 lbs), we can keep only the rows where `wt <= 4`.
+
+```{r, eval = FALSE}
+filter(mtcars, wt <= 4)
+```
+
+```{r, echo = FALSE}
+as.tbl( filter(mtcars, wt <= 4) )
+```
+Alternatively, we could achieve the same thing by choosing everything that is *not* greater than 4, `!wt > 4`.  The exclamation point, `!`, is the *not* operator.
+
+```{r, eval = FALSE}
+filter(mtcars, !wt > 4)
+```
+
+```{r, echo = FALSE}
+as.tbl( filter(mtcars, !wt > 4) )
+```
+
+### Filtering grouped datasets
+
+We can filter grouped datasets, and the condition will be applied separately to each group.  For example, maybe we want to keep only the rows where `wt` is greater than its cylinder category group mean.  
+
+Notice I switch to filtering the grouped dataset `bycyl` here.
+
+```{r}
+filter( bycyl, wt > mean(wt) )
+```
+
+### Filtering by multiple conditions
+
+And, of course, we can filter datasets by multiple conditions at once.  If we wanted to filter the dataset to only cars with automatic transmission (`am == 0`) *and* that have weights less than or equal to 4000 lbs (`wt <= 4`), we can include both conditions in `filter()` separated by a comma.  
+
+```{r}
+filter(mtcars, am == 0, wt <= 4)
+```
+
+While we won't see it today, if you need a logical *OR* statement you will need the `|` symbol, found on the backslash key on your keyboard.
+
+### Scoped variants of `filter()`
+
+The **dplyr** package has `filter_all()`, `filter_at()`, and `filter_if()` verbs available.  These would be useful if we wanted to apply the same filter to many columns of data.
+
+These are often used in combination with the functions `any_vars()` or `all_vars()`.  The "Examples" section of the help page is a good place to start to see worked examples.
+
+## Selecting variables with `select()`
+
+Keeping only a subset of the columns of a dataset is referred to as *selecting variables*.  This might be for organizational reasons, where an analysis is focused on only some of many variables and so we want to create a dataset that contains only the variables of interest.  Selecting is about how many columns we want to keep, not how many rows we have.
+
+The **dplyr** function `select()` makes selecting columns very easy to do.  We can keep or drop variables by name (although you can also use the index number) with straightforward code.
+
+Let's *select* only the `cyl` variable from `mtcars` (printing just the first rows to save space in this document).
+
+```{r select, eval = FALSE}
+select(mtcars, cyl)
+```
+
+```{r select2, echo = FALSE}
+as.tbl( select(mtcars, cyl) )
+```
+
+If we want to keep all variables between (and including) `cyl` and `vs`, we indicate that with the colon, `:`.
+
+```{r, eval = FALSE}
+select(mtcars, cyl:vs)
+```
+
+```{r, echo = FALSE}
+as.tbl( select(mtcars, cyl:vs) )
+``` 
+
+If we want to keep only a few columns, we can separate the desired column names with a comma.  Here we select only `cyl` and `vs`.
+
+```{r, eval = FALSE}
+select(mtcars, cyl, vs)
+```
+
+```{r, echo = FALSE}
+as.tbl( select(mtcars, cyl, vs) )
+```
+
+### Using the special helper functions in `select()`
+
+The `select()` function has several special functions to make variable selection even easier.  See the help page for `select_helpers` for a list of all of these (`?select_helpers`).  
+
+These special functions include `starts_with()`, `contains()`, and `ends_with()`, among others.  Such functions can be very useful if you have coded your variables names so that related variables contain the same letters or numbers.
+
+We are going to start with an example `starts_with()`, where we select all variables with names that *start with* a lowercase `d`.  Remember that R is case sensitive, so an uppercase `D` is different than a lowercase `d`.
+
+```{r, eval = FALSE}
+select( mtcars, starts_with("d") )
+```
+
+```{r, echo = FALSE}
+as.tbl( select( mtcars, starts_with("d") ) )
+```
+
+Or we could keep all variables that *contain* a lowercase `a` anywhere in the variable name.
+
+```{r, eval = FALSE}
+select( mtcars, contains("a") )
+```
+
+```{r, echo = FALSE}
+as.tbl( select( mtcars, contains("a") ) )
+```
+
+We've been choosing which variables we want to keep, but we could also choose which variables we want to drop like we did with `summarise_at()` earlier.  We drop variables using the minus sign (`-`).
+
+Drop the `gear` variable.
+
+```{r, eval = FALSE}
+select(mtcars, -gear)
+```
+
+```{r, echo = FALSE}
+as.tbl( select(mtcars, -gear) )
+```
+
+Drop both the `gear` and `carb` variables.
+
+```{r, eval = FALSE}
+select(mtcars, -gear, -carb) 
+```
+
+```{r, echo = FALSE}
+as.tbl( select(mtcars, -gear, -carb) ) 
+```
+
+Drop all variables between and including `am` and `carb`.  Notice that parentheses are needed around the variables to use `-` like this.
+
+```{r, eval = FALSE}
+select( mtcars, -(am:carb) ) 
+```
+
+```{r, echo = FALSE}
+as.tbl( select( mtcars, -(am:carb) ) )
+```
+
+Drop variables that end with the letter "t".
+
+```{r, eval = FALSE}
+select( mtcars, -ends_with("t") ) 
+```
+
+```{r, echo = FALSE}
+as.tbl( select( mtcars, -ends_with("t") ) ) 
+```
+
+The `select_helpers` can be used in other functions, as well.  We would commonly use them in the scoped `*_at()` functions like `summarise_at()` to help pick the variables to use within the function.  The `select()` function also has scoped variants available, `select_all()`, `select_at()`, and `select_if()`.
+
+## Creating new variables with `mutate()`
+
+In **dplyr**, we can use `mutate()` to create new variables and add them to the dataset as new columns.  The new variable is the same length as the current dataset; in other words, it has the same number of rows as the original dataset.  We will be making some new variables and adding them to `mtcars` to illustrate how this works.
+
+Let's start by making a new variable called `disp.hp`, which is the sum of engine displacement (`disp`) and horsepower (`hp`).
+
+As with the other **dplyr** functions, the dataset is the first argument of `mutate`.
+
+```{r mutate, eval = FALSE}
+mutate(mtcars, disp.hp = disp + hp)
+```
+
+```{r mutate2, echo = FALSE}
+as.tbl( mutate(mtcars, disp.hp = disp + hp) )
+```
+
+We can make multiple new variables at once, separating each new variable by a comma like we did in `summarise()`.  A handy feature of `mutate()` is that we can work directly with the new variables we've made within the same function call.  For example, we can first calculate `disp.hp` and then calculate a second variable that is half of `disp.hp` (`disp.hp` divided by 2).  We can create other variables, as well, so we'll create the ratio of `qsec` and `wt` while we're at it.
+
+```{r, eval = FALSE}
+mutate(mtcars, 
+       disp.hp = disp + hp,
+       halfdh = disp.hp/2,
+       qw = qsec/wt)
+```
+
+```{r, echo = FALSE}
+as.tbl( mutate(mtcars, 
+               disp.hp = disp + hp,
+               halfdh = disp.hp/2,
+               qw = qsec/wt) )
+```
+
+### Using `mutate()` with grouped datasets
+
+We can work with grouped datasets when using `mutate()`.  This is useful when we want to add a column of a summary statistic for each group to the existing dataset rather than making a summary dataset.  
+
+Let's create and add a new variable that is the mean horsepower for each cylinder category.  Each car within a cylinder category will have the same value of mean horsepower, as `mutate()` always returns a new dataset that is the same length as the original.  
+
+Since this is a grouped operation we'll work with the grouped dataset `bycyl` we made earlier.
+
+```{r}
+mutate( bycyl, mhp = mean(hp) )
+```
+
+As you can see, the code for `mutate()` resembles the code for `summarise()`.  While we will not see examples today, there are `mutate_all()`/`mutate_at()`/`mutate_if()` functions available that work much like the scoped variants of the `summarise()` function we saw earlier today.  
+
+There is also a function called `transmute()`, which creates new variables that are the same length as the current dataset like `mutate()` but only returns the new variables like `summarise()`.
+
+## Sorting
+
+There are some situations where you might want to sort your dataset by variables within the dataset.  For example, if we want to pull out the first observation in each group from a time series we might sort the dataset first by time within group prior to filtering.  We can sort datasets with **dplyr** using `arrange()`.
+
+Here we'll start by sorting `mtcars` by `cyl`.  By default we sort whatever variable we are sorting on from low to high (ascending order).
+
+```{r arrange, eval = FALSE}
+arrange(mtcars, cyl)
+```
+
+```{r arrange2, echo = FALSE}
+as.tbl( arrange(mtcars, cyl) )
+```
+
+To sort datasets by variables in descending order (highest to lowest), we can use the minus sign (`-`) or the function `desc` (which is from **dplyr**).
+
+```{r arrange3, eval = FALSE}
+arrange(mtcars, -cyl)
+```
+
+```{r arrange4, echo = FALSE}
+as.tbl( arrange(mtcars, -cyl) )
+```
+
+```{r arrange5, eval = FALSE}
+arrange( mtcars, desc(cyl) )
+```
+
+```{r arrange6, echo = FALSE}
+as.tbl( arrange( mtcars, desc(cyl) ) )
+```
+
+To sort variables only within groups, we sort by the grouping variable first and then the other sorting variables.  The `arrange()` function ignores `group_by`, which is important to remember because it's different than the other **dplyr** verbs we've learned today.
+
+Here's an example of within-group sorting, sorting each cylinder category from lowest to highest `wt`.  
+
+```{r arrange7}
+arrange(mtcars, cyl, wt)
+```
+
+To sort by more variables, just keep adding them in `arrange()`.
+
+## Combining data manipulation tasks
+
+When working with our own datasets we'll often want to do multiple data manipulation tasks in a row.  Now that we've learned how to do different kinds of data manipulation, let's string multiple manipulations together.  
+
+We are going to:
+
+1. Filter the `mtcars` dataset to just those cars with automatic transmissions;  
+2. Create a new variable that is the ratio of engine displacement and horsepower;  
+3. Calculate the mean of this new variable separately for each cylinder category.  
+
+### Using temporary objects
+
+First we'll do this one step at a time, creating a new named object for each step.  As a reminder, we haven't been naming objects as we practiced the functions above but instead were only printing results to the R Console.  Now we're actually naming each object.  The extra pair of parentheses prints the object to the Console so we can see what happens at each step.
+
+```{r combined}
+# Filter by automatic transmission
+( filtcars = filter(mtcars, am == 0) )
+
+# Create new variable in the filtered dataset
+( ratio.cars = mutate( filtcars, hd.ratio = hp/disp) )
+
+# Group by number of cylinders
+grp.ratio = group_by(ratio.cars, cyl)
+
+# Calculate mean of the new ratio variable by cylinder category
+( sum.ratio = summarise( grp.ratio, mratio = mean(hd.ratio) ) )
+```
+
+The downside of this approach to multiple manipulations is that we had to make four objects when we really just wanted the final `sum.ratio` object.  We have to think of names for each object at each step and we end up with a bunch of temporary objects in our R Environment.  
+
+### Nesting functions to avoid temporary objects
+
+An alternative to temporary objects is to *nest* all the functions together.  This means we put one function call within the next function call.  Nesting allows us to avoid making any temporary objects but the resulting code is a bit hard to read.  The code from nested functions is read inside out, where the first thing we do is also the most nested. 
+
+First, a simple example of nesting functions from work we did earlier, where we want to group the dataset by `cyl` and `am` and then calculate the mean of `disp`.  Here's the same task via nesting.  We put the `group_by()` function call within `summarise()`.
+
+```{r nest}
+summarise( group_by(mtcars, cyl, am), mdisp = mean(disp) )
+```
+
+Now the more complicated example, where we combined the series of data manipulation tasks.  Note how the `filter()` is four functions deep in the code below.
+
+```{r}
+( sum.ratio = summarise( group_by( mutate( filter(mtcars, am == 0),
+                                           hd.ratio = hp/disp),
+                                   cyl),
+						  mratio = mean(hd.ratio) ) )
+```
+
+### The pipe operator
+
+Now that we are combining multiple data manipulation functions from **dplyr**, it's time to talk about the pipe operator.  The pipe operator (`%>%`) represents a different coding style.  The pipe allows us to perform a series of data manipulation steps in a long *chain* while avoiding all those temporary objects or difficult-to-read nested code.  
+
+In essence, the pipe operator *pipes* a dataset into a function as the first argument.  One reason I've been pointing out to you that the **dplyr** functions have the dataset as the first argument is that this is one of the things that makes piping so easy with these functions.
+
+You can think of the pipe as being pronounced "then", which we'll talk more about as we see some examples.  Using the pipe is a bit hard to picture when you are first introduced to it, but things should start to get clearer once we see some code.
+
+Let's start with a simple example.  Remember when we grouped `mtcars` by `cyl` earlier?
+
+```{r pipe}
+bycyl = group_by(mtcars, cyl)
+```
+
+We read even this simple code "inside out".  We see that we are grouping with `group_by` and then if we read inside the function we see the dataset we are going to group.  Let's write this same code using the pipe.
+
+```{r}
+bycyl = mtcars %>% group_by(cyl)
+```
+
+The code with the pipe is read from left to right.  We see we are working with the `mtcars` dataset and *then* that we are grouping that dataset by `cyl`.  The result is the same, but the code itself looks quite different.
+
+Handily, we can keep piping through multiple functions in one long chain.  Let's group `mtcars` by `cyl` and then calculate the mean `disp` of each group.  
+
+When working with pipes in a chain, it is standard to use a line break after each pipe with an indent for each subsequent function.  
+
+Aside:  Stylistically, including white space in your code improves code readability.  Think of writing a sentence without white space; it would be hard to read!  Newer R users sometimes need to be reminded that white space rationing is not in effect. :-D  It might seem clunky at first, but including white space quickly becomes natural and your code becomes much easier to read and understand.
+
+```{r}
+mtcars %>%
+	group_by(cyl) %>%
+	summarise( mdisp = mean(disp) )
+```
+
+Again, the above code is read from left to right.  We see we are going to work with `mtcars`, then we group it by `cyl`, and then we calculate the mean `disp` of the grouped dataset.  When you read it like this you can see why we might pronounce `%>%` as *then*.
+
+#### Combining data manipulation tasks using the pipe operator
+
+Let's go back to our combined data manipulation task we did a few minutes ago on `mtcars` and use piping instead of temporary objects or nesting.
+
+```{r}
+mtcars %>%
+	filter(am == 0) %>% # filter out the manual transmission cars
+	mutate(hd.ratio = hp/disp) %>% # make new ratio variable
+	group_by(cyl) %>% # group by number of cylinders
+	summarise(mratio = mean(hd.ratio) ) # calculate mean hd.ratio per cylinder category
+```
+
+We didn't assign a name to the final object.  Let's do that now.
+
+```{r}
+sum.ratio = mtcars %>%
+	filter(am == 0) %>% # filter out the manual transmission cars
+	mutate(hd.ratio = hp/disp) %>% # make new ratio variable
+	group_by(cyl) %>% # group by number of cylinders
+	summarise(mratio = mean(hd.ratio) ) # calculate mean hd.ratio per cylinder category
+```
+
+#### Using the pipe operator with non-**dplyr** functions
+
+The pipe operator can be used with functions outside the **dplyr** package, as well.  If the first argument of the function is the dataset, the code looks just like what we've been doing.  For example, we can use the pipe with the `head()` function from base R and get the first 10 rows of `mtcars`.  The first argument of the `head()` function is the dataset.
+
+```{r}
+mtcars %>% head(n = 10)
+```
+
+If the first argument of a function is *not* the dataset, we have to use the dot, `.`, to represent the dataset name in the function we are piping into.  We can see this if we use the pipe operator with the `t.test()` function, which doesn't have `data` as the first argument.  
+
+Here we test for a difference in mean horsepower among transmission types based on the `mtcars` dataset.  The dataset is piped to the `data` argument with the `.`.
+
+```{r}
+mtcars %>% t.test(hp ~ am, data = .)
+```
+
+We generally wouldn't use piping in such a simple case, though, as we would just use the data argument in `t.test` directly.  A more realistic example is if we wanted to filter the dataset before doing the test.  
+
+Let's filter `mtcars` to cars weighing less than or equal to 4000 lbs and then test if mean horsepower is different between transmission types.
+
+```{r}
+mtcars %>% 
+	filter(wt <= 4) %>% 
+	t.test(hp ~ am, data = .)
+```
+
+## Counting the number of rows in a group
+
+Before we move on, I want to talk about one more function.  The **dplyr** package has a built-in function, `n()`, for counting up the unique rows in a group.  This is useful when making tables of summary statistics.
+
+```{r n}
+mtcars %>%
+	group_by(cyl) %>%
+	summarise( n = n() )
+```
+
+This function can be used directly inside other functions, such as `filter()`, for removing rows based on the group total count.  I'll keep on the rows of the dataset of `cyl` groups that have fewer than 10 observations.  It turns out that this is true only for the `6` group.
+
+To show best practice here I'll `ungroup()` at the end of the pipe chain.
+
+```{r nfilter}
+mtcars %>%
+	group_by(cyl) %>%
+	filter(n() < 10) %>%
+    ungroup()
+```
+
+The `n()` can also be used when assigning index numbers within groups.  I use this most often when my rows within groups aren't uniquely identified but I need them to be.  This is especially useful if the group sizes aren't known or might vary.  
+
+In this example we'll also `select()` just the first three columns so we can easily see the new `index` column that we create.  This column indexes from one to group size (`n()`) in each cylinder group.
+
+```{r nmutate}
+mtcars %>%
+	group_by(cyl) %>%
+	select(1:3) %>%
+	mutate( index = 1:n() ) %>%
+    ungroup()
+```
+
+We might want to add this index in based on the order of some variable in the dataset, not on the order the dataset is when we read it in.  This is a case for `arrange()`.  
+
+Let's add the index based on the order of `disp` within each `cyl` category.  We `arrange()` prior to creating the `index` variable.
+
+```{r nmutate2}
+mtcars %>%
+	arrange(cyl, disp) %>%
+	group_by(cyl) %>%
+	select(1:3) %>%
+	mutate( index = 1:n() ) %>%
+    ungroup()
+```
+
+## Practice data manipulation
+
+So far we've covered a lot of material on data manipulation functions.  Before going on to the next topics I'd like to take some time to allow you to practice using some of the functions we've seen so far.  I've set up two example problems below.  Each example will take a different set of functions to solve.  
+
+### The `babynames` dataset
+
+We'll be practicing using the `babynames` dataset.  This can be found in package **babynames**.  The current version of this package is `1.0.0`.  If you do not have this package or it is not up to date, please install it.  You can do this with the RStudio Packages pane Install button, or run the code `install.packages("babynames")`.
+
+```{r packagevers2}
+packageVersion("babynames")
+```
+
+Once the package is installed, we can load the package.
+
+```{r babynames}
+library(babynames)
+```
+
+The help page for `babynames` gives us some basic information on the dataset.
+
+```{r babyhelp, eval = FALSE}
+?babynames
+```
+
+The `babynames` dataset contains data from the United States Social Security Administration on the number and proportion of babies given a name each year from 1880 through 2017.  Rare names (recorded less than 5 times) are excluded from the dataset in R.  The annual proportion of babies given a name was calculated separately for male and female babies (`sex`).
+
+The dataset has five variables, shown below.
+
+```{r glimpsebaby}
+glimpse(babynames)
+head(babynames)
+```
+
+### Practice problem 1
+
+The first practice problem involves filtering and sorting.
+
+> **Which name was given to the largest number of babies in the year you were born?**  
+
+Once you find the answer
+
+> **How many babies were given that name in 2017?**  
+
+You can check to see [how I approached this problem below](#answers-problem-1).
+
+### Practice problem 2
+
+The second practice problem involves filtering, grouping, and then summarizing the number of rows per group.
+
+> **Calculate the total number of baby names for each level of the `sex` variable in the year you were born and in 2017.**   
+
+**Hint:** To use `filter()` with multiple values you'll need `%in%` instead of `==`.  For example, if you wanted to filter to years 1980 and 2015 you'd use `year %in% c(1980, 2015)` for the condition in `filter()`.
+
+[Here's how I tackled this.](#answer-problem-2)
+
+# Part 2:  Reshaping datasets
+
+We are going to switch gears now and talk about how to *reshape* datasets.  
+
+In this section, we will learn to take the information from the columns of a dataset and put that information on rows instead.  This is an example of taking a *wide* dataset and making it *long*.  We will also learn to take information from the rows of a dataset and put that information into columns instead.  In other words, reshape a dataset from *long* to *wide*.  None of this changes how much information we have, it just changes how the information is stored.
+
+We will be learning to reshape using the **tidyr** package.  
+
+The current language of the **tidyr** package involves *gathering* and *spreading*.  To *gather* a dataset means to take a wide dataset and transform it into a long dataset.  To *spread* a dataset means to take a long dataset and make it wide.  We'll see examples of these as we go along, which should help clear up some of the confusion with all this new terminology.
+
+We'll learn the basics of reshaping on what I call a *toy* dataset.  A toy dataset is a set of fake data that we make to practice functions on.  Small toy datasets are handy when you are learning a new function or trying to troubleshoot a data manipulation technique.  We could use built-in datasets like `mtcars`, as well, but toy datasets are conveniently very small.
+
+The dataset that we will create, `toy1`, will have six rows and five columns.  
+
+The first column contains the levels of some treatment (`trt`).  
+
+The second contains the identifier of individuals the treatment was applied to (`indiv`).  These identifiers are repeated across treatments, so individual `1` in treatment `a` is different than individual `1` in treatment `b`.  This means the combination of treatment and individual is the unique identifier for each row.
+
+The last three columns are some quantitative measurement taken at three different times (`time1`, `time2`, and `time3`).  
+
+The shape of this toy dataset is one I commonly see for data from studies that take measurements through time.
+
+I'm not going to walk through this code, but below you can see how I create this dataset. If you are interested in more information on how to get started simulating data in R, see my post [here](https://aosmith.rbind.io/2018/08/29/getting-started-simulating-data/).
+
+```{r toy}
+# Make 2 treatments, a and b
+( trt = rep( c("a", "b"), each = 3) )
+
+# Make 6 individuals, named 1 through 3 within each treatment
+( indiv = rep(1:3, times = 2) )
+
+# Make values for the quantitative measurement 
+	# taken at 3 different time periods for the 6 individuals
+	# by drawing from a normal(0,1) distribution 6 times
+# I didn't set the seed (see "set.seed"), 
+	# so our datasets will all be slightly different
+time1 = rnorm(n = 6)
+time2 = rnorm(n = 6)
+time3 = rnorm(n = 6)
+
+# Put these five vectors into a data.frame
+( toy1 = data.frame(indiv, trt, time1, time2, time3) )
+```
+
+This dataset `toy1` is in a *wide* format.  If we were going to analyze this dataset in R, we would likely need it to be in a long format.  We want to keep the two columns containing the identifying information (`trt`, `indiv`), have a single column containing the information about the time of measurement (`time1`, `time2`, or `time3`), and a single column containing the values of the quantitative measurement.  To go from wide to long, we'll use the `gather()` function.
+
+## Reshaping from wide to long with `gather()`
+
+In `gather()`, the first thing we do after defining the dataset we want to reshape is to name the two new columns we are making.  The `key` argument gives the name of the new categorical variable that we will create that is based on the variable names of the columns we are *gathering*.  The `value` argument is the name of the new column that will contain all the values that used to be in multiple columns.
+
+Once we name our new columns we need to list which columns we want to collapse into one.  In this case, we want to gather up only the three time-based variables so I list them all, separated by commas.
+
+Notice that we have the same amount of information in the long dataset below as we did in the wide dataset.  We changed the shape, not the data.
+
+```{r gather1}
+gather(toy1, key = "time",
+       value = "measurement",
+       time1, time2, time3)
+```
+
+The **tidyr** package was built to be used with pipes, and so the dataset is always the first argument.  In addition, we can use the **dplyr** `select_helpers` when choosing which columns we want to gather together.  This can be pretty convenient.
+
+Here are three different ways we could ask for the three "time" columns to be gathered into one.  All give the exact same output as above, as each gathers the data in `time1`, `time2`, and `time3` into a single column.
+
+```{r gather2, eval = FALSE}
+# Using a colon to gather each variable 
+    # and everything between
+gather(toy1, key = "time",
+       value = "measurement",
+       time1:time3)
+
+# Removing the two variables we don't want to gather
+gather(toy1, key = "time",
+       value = "measurement",
+       -indiv, -trt)
+
+# Using contains to pick out the variables with
+    # "time" in their name to gather
+gather(toy1, key = "time",
+       value = "measurement",
+       contains("time") )
+```
+
+We'd better name this newly long-format object so we can use it in further examples.  We'll be using this long dataset to practice putting it back into wide format.
+
+```{r gather3}
+toy1long = gather(toy1, key = "time",
+                  value = "measurement",
+                  contains("time") )
+```
+
+## Reshaping from long to wide with `spread()`
+
+Now we can use the function `spread()` to reshape the long dataset `toy1long` back into the original wide shape.  You might want to do this if, for example, you were going to take a dataset from an analysis done in R to graph in a program like SigmaPlot (which apparently often works best on wide datasets).
+
+In the `spread()` function, the first argument after defining the dataset is to define the `key` column.  This is the column that contains the groups that we want as separate columns.  The values in the `key` column will be used as the new variable names in the wide format dataset.  
+
+The second argument is the `value` argument, which is where we define the column that contains the values we want to fill the new columns with.
+
+```{r spread1}
+spread(toy1long, key = time, value = measurement)
+```
+
+### Duplicate identifiers in `spread()`
+
+If the rows of the long dataset aren't uniquely identified you will not be able to spread the dataset wide.  
+
+For example, if we were trying to spread `toy1long` but we only had the `trt` variable and not the `indiv` variable our rows wouldn't be uniquely identified.  It is only the combination of `trt`, `indiv`, and `time` that uniquely identifies a row.
+
+Let's remove `indiv` from the dataset using `select()`.
+
+```{r notunique}
+toy1long %>%
+       select(-indiv)
+```
+
+There are now multiple observations of each time for each `trt` category; our rows are not uniquely identified.  Let's see what happens when we try to use `spread()` with this dataset.  
+
+```{r notunique2, error = TRUE}
+toy1long %>%
+       select(-indiv) %>% 
+       spread(key = time, value = measurement)
+```
+
+We end up getting a common `spread()` error about rows not having unique identifiers.  When you get this error message it's usually time to take a step back and think about what you are trying to do and why, which the error message is trying to prompt you to do.  It is likely that there is an additional step that needs to be done prior to reshaping the dataset.
+
+In this case, if we really want the dataset without `indiv` to be spread out wide we'll need to summarize it in some way first so that each `trt` category has a single value for each `time`.  For example, we could calculate the mean for each `trt` for each time period.  This is done using `group_by()` and `summarise()`.
+
+```{r notunique3}
+toy1long %>%
+	select(-indiv) %>%
+	group_by(trt, time) %>%
+	summarise(measurement = mean(measurement) )
+```
+
+We can spread this dataset because the rows are now uniquely identified by `trt` and `time`.  We can `spread()` within the same chain of pipes we used to summarize the dataset.  
+
+Notice I `ungroup()` prior to spreading so the result has no grouping variable.
+
+```{r notunique4}
+toy1long %>%
+	select(-indiv) %>%
+	group_by(trt, time) %>%
+	summarise(measurement = mean(measurement) ) %>%
+    ungroup() %>%
+	spread(key = time, value = measurement)
+```
+
+### Using `unite()` prior to spreading
+
+There are many other useful functions in the **tidyr** package, although we don't have time to cover all of them today.  We will end our **tidyr** adventure by learning how to use `unite()`.
+
+We use `unite()` when we want to spread a dataset and want a *combination* of two variables as our new columns.  To use `unite()` we need to name the new column we are making and then list the columns that contain values we want to *unite* together.
+
+Using the defaults, the values in the new column will be separated by an underscore (`_`) and the columns that we united are removed from the dataset.  See the help page (`?unite`) to see the arguments to change these defaults.
+
+Here we'll unite the values of `trt` and `time` into a new variable we'll name `trt_time`.
+
+```{r unite}
+toy1long %>%
+	unite(col = "trt_time", trt, time)
+```
+
+Once the dataset has the new combined variable, we can use that in `spread()` to make a very wide format dataset.  Notice that, again, we still have the same amount of information in this dataset; it's just now in a different format.
+
+```{r unite2}
+toy1long %>%
+	unite(col = "trt_time", trt, time) %>%
+	spread(key = trt_time, value = measurement)
+```
+
+The complement to `unite()` is `separate()`, which we won't see today but is often used when we want to gather multiple sets of columns.
+
+## Practice reshaping
+
+Before we move on to Part 3 of the workshop I want to take time to practice reshaping with `spread()` and `gather()`.  
+
+We will once again be working with the `babynames` dataset.
+
+### Practice problem 3
+
+The third practice problem is based off of the dataset from [practice problem 2](#practice-problem-2).  We calculated the total number of baby names in the year each of us was born and 2017 for each `sex`.
+
+I didn't name the final object, but I should so I can use it in this problem.  I'll do that below, and print the result to remember what it looked like.
+
+```{r}
+( numbaby_76_17 = babynames %>%
+    filter( year %in% c(1976, 2017) ) %>%
+    group_by(year, sex) %>%
+    summarise(n = n() ) %>%
+    ungroup() )
+```
+
+Using your summarized dataset from practice problem 2:
+
+> **Reshape the dataset to a wide format.  Make a dataset with a separate column for each `sex` containing the number of baby names in a given `year`.**  
+
+> **Now reshape the same dataset to different wide format.  Make a dataset with a separate column for each `year` containing the number of baby names in a given `sex`.**  
+
+Finally, practice putting the dataset back in the original format.
+
+> **Take the dataset that has `sex` as separate columns and put this back in the original format.**  
+
+You can see my approach [here](#answers-problem-3).
+
+# Part 3:  Joining two datasets together
+
+The last topic we are going to cover today is merging or *joining*.  For a variety of reasons, we might have data for a single analysis stored in separate datasets.  Joining is the process of combining two datasets based on matching values in the columns you are using as the *unique identifiers*.  The unique identifier variables are the variables in the dataset that tells the computer which rows in one dataset should be matched to the rows in another dataset.  
+
+There is a `merge()` function in base R, but we will be using some of the join functions from **dplyr** today, including `inner_join()`, `left_join()`, and `full_join()`.
+
+Let's create two toy datasets to join together.  
+
+The first dataset (`tojoin1`) will contain counts of some species in three different treatment plots (`treat`) within different sites (`site`).  
+
+The second dataset (`tojoin2`) will contain an environmental variable, measured on the same plots and sites (`elev`).  Both datasets are missing measurements from a treatment plot in site 3; the first dataset is missing treatment "c" and the second dataset is missing treatment "a".
+
+This time I will make each dataset in a single step rather than creating each variable separately first.  The key to making a `data.frame()` like this is to make sure each variable is the same length as each other variable.
+
+If we `set.seed()` to the same number we'll all get the same random numbers from `rpois()` and `rgamma()`.
+
+```{r merge}
+set.seed(16) # If I set the seed, we will all get the same random numbers
+
+# This dataset is slightly unbalanced, as site 3
+	# doesn't have the "c" treatment count
+( tojoin1 = data.frame(site = rep(1:3, each = 3, length.out = 8),
+			   treat = rep(c("a", "b", "c"), length.out = 8),
+			   count = rpois(8, 6) ) )
+
+# This dataset is also slightly unbalanced,
+	# missing the elevation measurement from
+	# site 3 treatment "a"
+( tojoin2 = data.frame(site = rep(1:3, length.out = 8),
+			   treat = rep(c("b", "c", "a"), each = 3, length.out = 8),
+			   elev = rgamma(8, 1000, 1) ) )
+```
+
+The unique identifier of each measurement in each dataset is a combination of `site` and `treat`; those are the variables that we will use to tell the computer which rows within the two datasets to combine into one. 
+
+## The inner join
+
+Let's start our joining practice by joining these two datasets together using `inner_join()`.  
+
+See the help page, `?join`, to see a description of each type of join available in **dplyr**.  In the documentation, you will see that every join involves two datasets, called `x` and `y`, to be joined.  The `x` dataset is the first dataset you give to the `join` function and the `y` dataset is the second.
+
+An *inner join* matches on the unique identifiers and returns only rows that are shared in both datasets.
+
+From the documentation, an `inner_join()` will
+
+> return all rows from x where there are matching values in y, and all columns from x and y
+
+By default, `inner_join()` joins on all columns shared by the two datasets.  When we use this default, we will get a message telling us which variables were used for joining when we run the code. 
+
+We'll name our new combined dataset `joined`, and print the result to the R Console.  
+
+```{r innerjoin1}
+( joined = inner_join(tojoin1, tojoin2) )
+```
+
+To make our code more explicit and easily understandable, we can also use the `by` argument to define which variables we want to join on.  This is what I usually do.
+
+```{r innerjoin2}
+inner_join( tojoin1, tojoin2, by = c("site", "treat") )
+```
+
+We see above that the joined dataset only has 7 rows.  This is because there are only 7 site-treatment combinations that are present in both datasets.  If we want to retain more rows, we'll need a different kind of join.
+
+## The left join
+
+A left join is used when we want to keep all rows in the first dataset regardless of if they have a match in the second dataset.
+
+From the documentation, `left_join()` will
+
+> return all rows from x, and all columns from x and y. Rows in x with no match in y will have NA values in the new columns.
+
+So in our scenario, we should get 8 rows back because we have 8 rows in the first dataset (`tojoin1`).  We will still be missing a row for site 3 treatment "a", as this is not present in the first dataset.
+
+```{r leftjoin}
+left_join( tojoin1, tojoin2, by = c("site", "treat") )
+```
+
+There is also a `right_join()`, which we won't practice today but works a lot like the `left_join()`.
+
+## The full join
+
+To keep all rows in both datasets regardless of a match, we can make a full join via `full_join()`.
+
+The `full_join()` function will
+
+> return all rows and all columns from both x and y. Where there are not matching values, returns NA for the one missing.
+
+This is how we can get rows for all nine site-treatment combinations.
+
+```{r fulljoin}
+full_join( tojoin1, tojoin2, by = c("site", "treat") )
+```
+
+## Matching multiple rows when joining
+
+There is an additional sentence in the documentation when describing the joins that we haven't discussed yet.
+
+> If there are multiple matches between x and y, all combination of the matches are returned.
+
+This is an important topic to cover, as sometimes we want this behavior but other times this behavior helps us uncover a mistake we are making.
+
+### An example of when this is useful
+
+For example, if we wanted to join a variable that was only measured at the "site" level, this behavior is desirable. Let's make a dataset that has a variable measured at the site level.
+
+```{r multmatch1}
+# A site level variable, the amount of rainfall
+( tojoin3 = data.frame(site = 1:3,
+				 rainfall = rgamma(3, 10, 1) ) )
+```
+
+This new dataset only has 3 rows.  Every treatment plot in the count dataset needs to be assigned to the same value of the `rainfall` site-level variable.  So each row in the site-level dataset will be matched to multiple rows in the count dataset when we join, which is what we want.  We end up with 8 rows, the same as what we had to start with.
+
+```{r multmatch2}
+left_join(tojoin1, tojoin3, by = "site")
+```
+
+### An example of when this indicates a mistake
+
+This sort of behavior can cause unexpected results, though.  If we join our original two joining datasets using only `site` instead of both the variables that make up the unique identifier of each row, we will end up with multiple matches per row.  This leads us with a dataset that is much longer than expected.  
+
+When this sort of thing happens unexpectedly, we likely need to step back and evaluate whether or not we have unique identifiers.  We may need to rethink what we are doing versus what we want the final dataset to look like.
+
+```{r multmatch3, eval = FALSE}
+left_join(tojoin1, tojoin2, by = "site")
+```
+
+```{r multmatch4, echo = FALSE}
+as.tbl( left_join(tojoin1, tojoin2, by = "site") )
+```
+
+## Using `anti_join()` to find missing data
+
+The very last function we'll learn today is yet another kind of join, called the `anti_join()`.  
+
+An `anti_join()` will
+
+> return all rows from x where there are not matching values in y, keeping just columns from x.
+
+This is great for figuring out which rows are missing matches between two datasets.  In an anti-join, we want to only return the values in the `x` dataset that are *not* in the `y` dataset.  
+
+Both `anti_join()` and the related `semi_join()` act more like filters than joins.
+
+Here's what this looks like, pulling out the row in `tojoin1` that is missing from `tojoin2`.  We see we are missing treatment "a" at site 3 from `tojoin2`.
+
+```{r anti}
+anti_join( tojoin1, tojoin2, by = c("site", "treat") )
+```
+
+If we wanted to find the row in `tojoin2` that is missing in `tojoin1`, we switch the order we put the datasets in `anti_join`.  Now we see where are missing treatment "c" at site 3 from `tojoin1`.
+
+```{r anti2}
+anti_join( tojoin2, tojoin1, by = c("site", "treat") )
+```
+
+## Using the join functions with the pipe operator
+
+The join functions can be used with the pipe operator. We can only pipe in one dataset at a time, so we have to decide if we want to pipe the dataset in as the `x` dataset or the `y` dataset.
+
+Piping in a `join` function isn't super useful for these simple examples I'm showing you, but we can easily fit a join into a longer pipe chain.
+
+If piping a dataset in as the `x` dataset, the piped-in dataset is just the first argument of whatever `join` function you are using.  This example uses the `anti_join()`.
+
+```{r pipejoin}
+tojoin1 %>% 
+	anti_join( tojoin2, by = c("site", "treat") )
+```
+
+We can pipe the dataset as the `y` dataset, as well, using the `.` placeholder we saw earlier.
+
+```{r pipejoin2}
+tojoin1 %>% 
+	anti_join( tojoin2, ., by = c("site", "treat") )
+```
+
+Joins are an important skill to learn for data manipulation.  The main take-home message here is that joins can be used as part of a longer chain of data manipulation steps via the pipe.  
+
+# Two additional **dplyr** functions
+
+There are a couple other functions I use for data checking a lot, which I will put here at the end of the workshop.  We may not get to these during the workshop and so I have listed them here for reference.
+
+## The `n_distinct()` function
+
+Another useful function is `n_distinct()`, which we can use for counting up the number of *unique values* of a variable.  I use this most when I'm learning about a dataset that I don't know well and want to understand the structure of individual variables.
+
+I also use `n_distinct`() when I think I have mistakes in a variable, such as a value of a categorical variable being misentered.  For example, if we know our dataset should only have 3 values for `cyl` we can check to make sure our variable doesn't contain more than that with `n_distinct()`.
+
+```{r ndistinct}
+mtcars %>%
+	summarise( ncyl = n_distinct(cyl) )
+```
+
+Another example is checking how many unique values of one variable is in each group.  Here we'll calculate how many unique values of `mpg` there are in each cylinder category with `n_distinct()` and compare that to the number of rows we have in that category calculated with `n()`.
+
+```{r ndistinct2}
+mtcars %>%
+	group_by(cyl) %>%
+	summarise( nmpg = n_distinct(mpg),
+	           n = n() )
+```
+
+There are fewer unique `mpg` values (only 27) than there are rows in the dataset.
+
+## The `distinct()` function
+
+The last of the **dplyr** functions we will see is the `distinct()` function.  This is the function we can use if we need to remove duplicate-value rows from our dataset.
+
+For example, we saw above that we had fewer unique values of `mpg` in each `cyl` group than we had rows in the dataset.  Let's pull out only the *distinct* values of `mpg` per `cyl` group.   
+
+The resulting dataset has 27 rows instead of the 32 rows of the original dataset.  These are the rows that contain the first of each unique value of `mpg` within each cylinder category.
+
+```{r distinct}
+mtcars %>%
+	group_by(cyl) %>%
+	distinct(mpg) %>%
+    ungroup()
+```
+
+Above we only kept the grouping variables and the variable we used to determine uniqueness.  If we want to keep all the variables when using `distinct()` we need the `.keep_all` argument.
+
+```{r distinct2}
+mtcars %>%
+	group_by(cyl) %>%
+	distinct(mpg, .keep_all = TRUE) %>%
+    ungroup()
+```
+
+# Working through the practice problems
+
+You can see how I approached each practice problem below.
+
+## Answers problem 1
+
+> Which name was given to the largest number of babies in the year you were born?   
+
+I was born in 1976, so I first filter the dataset to that year.  Since I wanted to find the name given to the largest number of babies I then sorted by `n` in *descending order*.
+
+The most babies were named Michael in 1976.
+
+```{r}
+babynames %>%
+    filter(year == 1976) %>%
+    arrange(-n)
+```
+
+> How many babies were given that name in 2017?  
+
+I need to filter the dataset to 2017 and babies named Michael.  Notice I didn't specify `sex`, and there were both male and female babies named Michael in 2017.
+
+```{r}
+babynames %>%
+    filter(year == 2017, name == "Michael")
+```
+
+## Answer problem 2
+
+> **Calculate the total number of baby names for each level of the `sex` variable in the year you were born and in 2017.**  
+
+We didn't see how to filter to multiple values, so we'll need to make sure of the hint to do so.  
+
+I'll first filter the dataset to only the years 1976 and 2017.  Then I'll group it by both `year` and `sex` so I can add up the total number of rows in each `year` for each `sex` with `summarise()` and `n()`.  This works because each row in the `babynames` dataset is a unique name.
+
+I end with `ungroup()` to make sure the final result isn't grouped anymore.
+
+There are more different baby names in 2017 compared to 1976 and in both years there were more unique names for female babies compared to male babies.
+
+```{r}
+babynames %>%
+    filter( year %in% c(1976, 2017) ) %>%
+    group_by(year, sex) %>%
+    summarise(n = n() ) %>%
+    ungroup()
+```
+
+## Answers problem 3
+
+These questions are based on the final dataset from practice problem 2.  My first step was to name this object so I can use it to answer the question in problem 3.
+
+```{r}
+numbaby_76_17 = babynames %>%
+    filter( year %in% c(1976, 2017) ) %>%
+    group_by(year, sex) %>%
+    summarise(n = n() ) %>%
+    ungroup()
+```
+
+> **Reshape the dataset from practice problem 2 to a wide format.  Make a dataset with a separate column for each `sex` containing the number of baby names in a given `year`.**  
+
+Since we're going from long to wide we'll need `spread()`.  The question specifically asks for separate columns by `sex`, which tells me this is the `key` variable.  The `n` variable is what I need to fill the columns with so I use it as the `value` variable.
+
+```{r}
+numbaby_76_17 %>%
+    spread(key = sex, value = n)
+```
+
+> **Now reshape the same dataset to different wide format.  Make a dataset with a separate column for each `year` containing the number of baby names in a given `sex`.**  
+
+This is very similar to the first question except this time `year` is the `key` variable.  Notice that the result has backticks around the new column names, since having column names as numbers is not [syntactically valid](https://stat.ethz.ch/R-manual/R-devel/library/base/html/make.names.html) in R.
+
+```{r}
+numbaby_76_17 %>%
+    spread(key = year, value = n)
+```
+
+> **Take the dataset that has `sex` as separate columns and put this back in the original format.**  
+
+Since we are now going from 'wide" to "long" this involves using `gather()`.  The two columns that contain information I want to gather are `F` and `M`.  I'll call the new categorical column `"sex"` and the new continuous column `"num_name"`.  I define the columns I want to gather as `F:M`.
+
+```{r}
+numbaby_76_17 %>%
+    spread(key = sex, value = n) %>%
+    gather(key = "sex", value = "num_name", F:M)
+```
+
+
