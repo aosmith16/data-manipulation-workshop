@@ -59,20 +59,20 @@ The RStudio cheat sheets may also be helpful: https://www.rstudio.com/resources/
 ### Check package version
 
 The current version of **dplyr** is 0.8.0.1 and the current version of **tidyr** is 0.8.3.  
-We can use `packageVersion` to check for the currently installed version of a package, to make sure we are using the current versions.
+We can use `packageVersion` to check for the currently installed version of a package.  We should be using the current versions.
 
 ```{r packagevers}
 packageVersion("dplyr")
 packageVersion("tidyr")
 ```
 
-If one of these packages isn't up to date, you need to re-install it.  You can install via coding using, e.g., `install.packages("tidyr")` or via the RStudio Packages pane Install button.  Remember that you do not need to install a package every time you use it, so don't make this code part of a script.
+If one of these packages isn't up to date, you need to re-install it.  You can install via coding using, e.g., `install.packages("tidyr")` or via the RStudio Packages pane `Install` button.  Remember that you do not need to install a package every time you use it, so don't make this code part of a script.
 
-In between version releases, bugs are fixed and new issues addressed in the *development version* of a package.  For these two packages, you can see the changes, check for known issues, and download the current development version via their github repositories.  For **dplyr** see  https://github.com/tidyverse/dplyr and for **tidyr** see https://github.com/tidyverse/tidyr.
+In between version releases, bugs are fixed and new issues addressed in the *development version* of a package.  For these two packages, you can see the changes, check for known issues, and download the current development version via their Github repositories.  For **dplyr** see  https://github.com/tidyverse/dplyr and for **tidyr** see https://github.com/tidyverse/tidyr.
 
 ### Load packages
 
-If all packages are up-to-date, we can load **dplyr** and **tidyr** and get started.
+If all packages are up-to-date we can load **dplyr** and **tidyr** and get started.
 
 ```{r, message = FALSE}
 library(dplyr)
@@ -83,9 +83,15 @@ library(tidyr)
 
 In the first part of the workshop we will be using the `mtcars` dataset to practice data manipulation.  This dataset comes with R, and information about this dataset is available in the R help files for the dataset (`?mtcars`).
 
-We will be using both categorical and continuous variables from this dataset, including, `mpg` (Miles per US gallon), `wt` (car weight in 1000 lbs), `cyl` (number of cylinders), `am` (type of transmission), `disp` (engine displacement), `qsec` (quarter mile time), and `hp` (horsepower).    
+We will be using both categorical and continuous variables from this dataset, including:  `mpg` (Miles per US gallon),  
+`wt` (car weight in 1000 lbs),  
+`cyl` (number of cylinders),  
+`am` (type of transmission),  
+`disp` (engine displacement),  
+`qsec` (quarter mile time), and  
+`hp` (horsepower).    
 
-Let's take a quick look at the first six lines (with `head()`) and structure (with `str()`) of this dataset.  You should recognize that `cyl` and `am` (as well as others like `vs`) are categorical variables but that they are considered numeric variables in the dataset since the categories are expressed with numbers.
+Let's take a quick look at the first six lines (with `head()`) and structure (with `str()`) of this dataset.  You should recognize that `cyl` and `am` (as well as others like `vs`) are categorical variables.  However, they are considered numeric variables in the dataset since the categories are expressed with numbers.
 
 ```{r}
 head(mtcars)
@@ -511,7 +517,7 @@ Here's an example of within-group sorting, sorting each cylinder category from l
 arrange(mtcars, cyl, wt)
 ```
 
-To sort by more variables, just keep adding them in `arrange()`.
+To sort by more variables, keep adding them in `arrange()`, separated by commas.
 
 ## Combining data manipulation tasks
 
@@ -519,7 +525,7 @@ When working with our own datasets we'll often want to do multiple data manipula
 
 We are going to:
 
-1. Filter the `mtcars` dataset to just those cars with automatic transmissions;  
+1. Filter the `mtcars` dataset to only those cars with automatic transmissions;  
 2. Create a new variable that is the ratio of engine displacement and horsepower;  
 3. Calculate the mean of this new variable separately for each cylinder category.  
 
@@ -622,7 +628,7 @@ sum.ratio = mtcars %>%
 
 #### Using the pipe operator with non-**dplyr** functions
 
-The pipe operator can be used with functions outside the **dplyr** package, as well.  If the first argument of the function is the dataset, the code looks just like what we've been doing.  For example, we can use the pipe with the `head()` function from base R and get the first 10 rows of `mtcars`.  The first argument of the `head()` function is the dataset.
+The pipe operator can be used with functions outside the **dplyr** package, as well.  If the first argument of the function is the dataset, the code looks exactly like what we've been doing.  For example, we can use the pipe with the `head()` function from base R and get the first 10 rows of `mtcars`.  The first argument of the `head()` function is the dataset.
 
 ```{r}
 mtcars %>% head(n = 10)
@@ -636,7 +642,7 @@ Here we test for a difference in mean horsepower among transmission types based 
 mtcars %>% t.test(hp ~ am, data = .)
 ```
 
-We generally wouldn't use piping in such a simple case, though, as we would just use the data argument in `t.test` directly.  A more realistic example is if we wanted to filter the dataset before doing the test.  
+We generally wouldn't use piping in such a simple case, though, as we would use the data argument in `t.test` directly.  A more realistic example is if we wanted to filter the dataset before doing the test.  
 
 Let's filter `mtcars` to cars weighing less than or equal to 4000 lbs and then test if mean horsepower is different between transmission types.
 
@@ -694,7 +700,7 @@ mtcars %>%
 
 ## Practice data manipulation
 
-So far we've covered a lot of material on data manipulation functions.  Before going on to the next topics I'd like to take some time to allow you to practice using some of the functions we've seen so far.  I've set up two example problems below.  Each example will take a different set of functions to solve.  
+So far we've covered a lot of material on data manipulation functions.  Before going on to the next topic, I want to take some time to allow you to practice using some of the functions we've seen so far.  I've set up two example problems below.  Each example will take a different set of functions to solve.  
 
 ### The `babynames` dataset
 
@@ -743,7 +749,7 @@ The second practice problem involves filtering, grouping, and then summarizing t
 
 > **Calculate the total number of baby names for each level of the `sex` variable in the year you were born and in 2017.**   
 
-**Hint:** To use `filter()` with multiple values you'll need `%in%` instead of `==`.  For example, if you wanted to filter to years 1980 and 2015 you'd use `year %in% c(1980, 2015)` for the condition in `filter()`.
+**Hint:** To use `filter()` with multiple values you'll need `%in%` instead of `==`.  For example, if you wanted to filter to the years 1980 and 2015 you'd use `year %in% c(1980, 2015)` for the condition in `filter()`.
 
 [Here's how I tackled this.](#answer-problem-2)
 
@@ -928,9 +934,9 @@ We will once again be working with the `babynames` dataset.
 
 ### Practice problem 3
 
-The third practice problem is based off of the dataset from [practice problem 2](#practice-problem-2).  We calculated the total number of baby names in the year each of us was born and 2017 for each `sex`.
+The third practice problem is based off of our work from [practice problem 2](#practice-problem-2).  We calculated the total number of baby names in the year we were born and in 2017 for each `sex`.
 
-I didn't name the final object, but I should so I can use it in this problem.  I'll do that below, and print the result to remember what it looked like.
+I didn't name the final object, but I should so I can use it in this problem.  I'll do that here, and print the result so I remember what it looked like.
 
 ```{r}
 ( numbaby_76_17 = babynames %>%
@@ -1113,7 +1119,7 @@ The join functions can be used with the pipe operator. We can only pipe in one d
 
 Piping in a `join` function isn't super useful for these simple examples I'm showing you, but we can easily fit a join into a longer pipe chain.
 
-If piping a dataset in as the `x` dataset, the piped-in dataset is just the first argument of whatever `join` function you are using.  This example uses the `anti_join()`.
+If piping a dataset in as the `x` dataset, the piped-in dataset is the first argument of whatever `join` function you are using.  This example uses the `anti_join()`.
 
 ```{r pipejoin}
 tojoin1 %>% 
@@ -1206,6 +1212,8 @@ babynames %>%
     filter(year == 2017, name == "Michael")
 ```
 
+[Go to practice problem 2](#practice-problem-2)
+
 ## Answer problem 2
 
 > **Calculate the total number of baby names for each level of the `sex` variable in the year you were born and in 2017.**  
@@ -1225,6 +1233,8 @@ babynames %>%
     summarise(n = n() ) %>%
     ungroup()
 ```
+
+[Go to part 2 of the workshop](#part-2-reshaping-datasets)
 
 ## Answers problem 3
 
@@ -1266,4 +1276,4 @@ numbaby_76_17 %>%
     gather(key = "sex", value = "num_name", F:M)
 ```
 
-
+[Go to part 3 of the workshop](#part-3-joining-two-datasets-together)
