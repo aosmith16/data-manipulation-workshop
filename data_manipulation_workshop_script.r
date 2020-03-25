@@ -1,4 +1,4 @@
-# 2019-04-25
+# 2020-03
 
 # Data manipulation in R
 # This workshop focus on the basics of data manipulation
@@ -54,7 +54,7 @@
 
 # The packages ----
 # The current versions of the packages we'll be working with are
-	# dplyr 0.8.0.1 and tidyr 0.8.3
+	# dplyr 0.8.3 and tidyr 1.0.2
 
 # check if your version is up to date using packageVersion()
 packageVersion("dplyr")
@@ -191,7 +191,11 @@ ungroup( summarise( byam.cyl, mdisp = mean(disp) ) )
 	# calculating the same summary statistics 
 	# for multiple variables at once
 
-# They are listed in the same help page,
+# These scoped functions will still be available 
+     # but will be superseded by `across()` in dplyr 1.0.0, 
+     # which will be released in 2020.
+
+# These functions are listed in the same help page,
 	# and each has slightly different arguments
 ?summarise_all
 
@@ -205,14 +209,14 @@ ungroup( summarise( byam.cyl, mdisp = mean(disp) ) )
 
 # Here is the mean of every variable for each cylinder group 
 	# (using the "bycyl" grouped dataset)
-summarise_all(bycyl, mean)
+summarise_all(bycyl, .funs = mean)
 
 # What would happen if we had a factor variable
 	# and tried to do this?
-# We'll make "vs" a factor so we can see
+# We'll make "vs" a factor so we can see the result
 bycyl$vs = factor(bycyl$vs)
 
-summarise_all(bycyl, mean)
+summarise_all(bycyl, .funs = mean)
 
 # summarise_at() ----
 
@@ -224,7 +228,7 @@ summarise_all(bycyl, mean)
 	# as the second argument within vars()
 	# prior to giving the summary function we want to use
 # Here we'll ge the mean of only disp and wt
-summarise_at(bycyl, vars(disp, wt), mean)
+summarise_at(bycyl, .vars = vars(disp, wt), .funs = mean)
 
 # Some of the variables in the dataset are 
 	# actually categorical
@@ -237,7 +241,7 @@ summarise_at(bycyl, vars(disp, wt), mean)
 	# function in a few minutes
 
 # Let's remove am and vs from the means summary table
-summarise_at(bycyl, vars(-am, -vs), mean)
+summarise_at(bycyl, .vars = vars(-am, -vs), .funs = mean)
 
 # summarise_if() ----
 # Another option for summarizing only some of the variables
@@ -249,21 +253,23 @@ summarise_at(bycyl, vars(-am, -vs), mean)
 
 # The predicate function in summarise_if() comes before 
 	# listing the summary functions we want
-summarise_if(bycyl, is.numeric, mean)
+summarise_if(bycyl, .predicate = is.numeric, .funs = mean)
 # In the results, one the numeric variables are summarized,
 	# so "vs", which we made a factor, isn't included
 
 # With any of the summarise_* functions,
 	# we can calculate more than a single summary functions at once 
 	# by including all the functions inside a list()
-summarise_if( bycyl, is.numeric, .funs = list(mean, max) )
+summarise_if( bycyl, .predicate = is.numeric, 
+              .funs = list(mean, max) )
 
 # Notice that the names of the function are appended
 	# with "fn1", "fn2"
 # This is a regression, and in the next version of dplyr
     # the names of the functions will be appended
 # We can change what is appended within the list()
-summarise_if( bycyl, is.numeric, .funs = list(mn = mean, mx = max) )
+summarise_if( bycyl, .predicate = is.numeric, 
+              .funs = list(mn = mean, mx = max) )
 
 
 # The glimpse() function alternative to printing to the console ----
@@ -271,7 +277,7 @@ summarise_if( bycyl, is.numeric, .funs = list(mn = mean, mx = max) )
 	# instead of creating a new object and dplyr doesn't
 	# show all possible variables of wide datasets like this
 # To see all variable names we could use glimpse()
-glimpse( summarise_if( bycyl, is.numeric, 
+glimpse( summarise_if( bycyl, .predicate = is.numeric, 
                        .funs = list(mn = mean, mx = max) ) )
 
 
@@ -669,7 +675,7 @@ mtcars %>%
 	group_by(cyl) %>%
 	select(1:3) %>%
 	mutate( index = 1:n() ) %>%
-    ungroup()
+     ungroup()
 
 # If we want to add the index based on some order,
 	# we could arrange the dataset first
@@ -679,10 +685,7 @@ mtcars %>%
 	group_by(cyl) %>%
 	select(1:3) %>%
 	mutate( index = 1:n() ) %>%
-    ungroup()
-
-
-
+     ungroup()
 
 # Practicing data manipulation ----
 
@@ -747,16 +750,13 @@ head(babynames)
 	# and from long format to wide format.
 
 # We are going to be working the tidyr package
-	# Which uses a language involving "gathering" and "spreading"
-# The reshape2 package is the precursor to tidyr, 
-	# which you might find useful, as well, 
-	# but we won't cover it today
+	# Which uses a language involving "pivoting"
 
-# When we "gather" datasets, we change them from wide format to long format,
+# When we pivot datasets "long", we change them from wide format to long format,
 	# so we take information stored in multiple columns and     
      # gather it all together into a single long column
 
-# When we "spread" datasets, we change them from long format to wide format
+# When we pivot datasets "wide", we change them from long format to wide format
 	# so we take information stored in multiple rows of a single column
 	# and put it into multiple columns
 
@@ -764,13 +764,13 @@ head(babynames)
 	# become clearer once we start practicing this
 
 # When I think of reasons to reshape datasets for work in R, 
-	# I think of gathering columns more often
-	# than spreading columns so we'll begin with that
+	# I think of going wide to long more often
+	# than going long to wide so we'll begin with that
 
 # We loaded tidyr at the beginning of the workshop
 	# so we should be ready to go
 
-# We're first going to create a "toy" dataset to work with
+# I'm going to create a "toy" dataset to work with
 # By "toy" I mean a small dataset that doesn't involve any "real" data
 # Being able to create toy datasets to try out functions is important,
 	# especially when your real dataset is very large and it will
@@ -779,121 +779,119 @@ head(babynames)
 	# from the package or from base R like the way
 	# we used mtcars in the first part of this workshop
 
-# We're going to create a time series dataset,
-	# where "individuals" were measured for some response
-	# at multiple points in time
+# I'm going to make a "time series" dataset,
+	# where "individuals" were measured for some 
+     # continuous response at multiple points in time
 # We need a column for individuals, 
 	# a column for some treatment that was applied,
 	# and columns holding values of some response 
 		# collected at the different times
-# We're going to make a dataset with 6 rows
+# This dataset will only have 6 rows
 # Small datasets are good for practice!
 
-# Make 2 treatments, a and b
+# I'm skipping going through the steps, but here is the data
+# There are 6 individuals but they were given the
+     # same names within each of the 2 treatments
+# Not I didn't set a seed (see the help file for set.seed() ),
+     # so our datasets will all have slightly different numbers
 
-( trt = rep( c("a", "b"), each = 3) )
+( toy1 = data.frame(indiv = rep(1:3, times = 2),
+                    trt = rep( c("a", "b"), each = 3),
+                    time1 = rnorm(n = 6),
+                    time2 = rnorm(n = 6),
+                    time3 = rnorm(n = 6) ) )
 
-# Make 6 individuals, named 1 through 3 within each treatment
-	# (this is commonly how folks code nested groups, 
-	# although it can be preferable
-	# to have individuals with unique identifiers)
+# Take note that this dataset contains 18 values
+     # of quantiative info (6 rows, 3 columns of numbers)
 
-( indiv = rep(1:3, times = 2) )
-
-# Make values for the quantitative measurement
-	# taken at 3 different time periods for the 6 individuals
-	# by drawing from a normal(0,1) distribution 6 times
-# I didn't set the seed (see the help file for set.seed() ),
-	# so our datasets will all be slightly different
-
-time1 = rnorm(n = 6)
-time2 = rnorm(n = 6)
-time3 = rnorm(n = 6)
-
-# Put these five vectors into a data.frame
-
-( toy1 = data.frame(indiv, trt, time1, time2, time3) )
-
+# Wide to long ----
 # If we did an analysis in R for a dataset like this
 	# we wouldn't want the three time periods in different columns
 # Instead we want a single column that represents time of measurement
 	# and then a column with the quantitative measurements
 # In short, we want to take a "wide" dataset and make it "long"
 
-# We will do this using the function gather() on our data.frame
-# In "gather", the first thing we do after the data argument
-	# is to name the new columns we are making
-# The first name, key, will be the new grouping column based
-	# on the column names
-# The second name, value, is the new column of
-	# all the values that we are taking from multiple columns
-	# and putting into a single column
-# Then we list the columns that we want
-	# to put into a single column;
-	# in this case, our three "time" variables
+# We will "lengthen" the dataset
+     # using the function pivot_longer() on our data.frame
+# In pivot_longer(), the first thing we do defining the data 
+	# is to choose the columns we want to be combined
+     # We can use the select_helpers we used earlier for this
+# Then we set the name of the new grouping column based
+	# on the column names with "names_to"
+# Finally we set the name of new column of
+	# all the values with "values_to"
+# Both column names must be done using strings,
+     # meaning the variable name in quotes
 
-gather(toy1, key = "time",
-       value = "measurement",
-       time1, time2, time3)
+toy1 %>% 
+     pivot_longer(cols = time1:time3,
+                  names_to = "time",
+                  values_to = "measurement")
 
-# The tidyr package is made to be used with pipes
-    # (hence the data argument is always first in tidyr functions)
-# This means we can use some of the same tricks
-# Rather than writing out all three column names,
-    # we can use some short cuts including minus signs
-    # and the select_helpers() functions
-
-# The following are all alternatives we could use
-	# for choosing which columns we wanted to gather together
-
-# Using a colon to gather each variable 
-    # and everything between
-gather(toy1, key = "time",
-       value = "measurement",
-       time1:time3)
-
-# Removing the two variables we don't want to gather
-gather(toy1, key = "time",
-       value = "measurement",
-       -indiv, -trt)
-
-# Using contains to pick out the variables with
-    # "time" in their name to gather
-gather(toy1, key = "time",
-       value = "measurement",
-       contains("time") )
+# This dataset has 18 rows and a single column of values
+     # and so still contains our original 18 pieces of info
 
 # We'd better name this object so we can use it for 
 	# additional reshaping practice
+# I use starts_with() this time in "cols"
 
-toy1long = gather(toy1, key = "time",
-                  value = "measurement",
-                  contains("time") )
+toy1long = toy1 %>% 
+     pivot_longer(cols = starts_with("time"),
+                  names_to = "time",
+                  values_to = "measurement")
 
-# Let's spread the measurement column of our long format dataset 
+# Long to wide ----
+
+# Let's take the measurement column of our long format dataset 
 	# back into the original format
-	# (i.e., put it back into the wide format)
+	# (i.e., "widen" it)
 # You might do this if you had a data set in long format
 	# that needed to be in a wide format 
 	# for use in a different software package
 
-# We will use the spread() function for this
-# In the spread() function, the first argument
-    # after the dataset is the "key" variable 
-# The "key" variable is the variable that contains the groups
-	# we want represented by separate columns
-	# The categories in this variable will be the new column names
-# The second argument is the name of the column
-	# that contains the values we will fill
-	# our new columns with (the "value" argument)
+# We will use the pivot_wider() function for this
+# After defining the dataset, we will use
+     # a pair of arguments to choose the
+     # column(s) that contain the variable that
+     # will be the new columns names ("names_from")
+     # and the column(s) that contain the values
+     # will will fill the new columns with ("values_from")
+# These are existing columns, so can be written using
+     # "bare" names (i.e., without quotes)
 
-spread(toy1long, key = time, value = measurement)
+toy1long %>%
+     pivot_wider(names_from = time,
+                 values_from = measurement)
 
-# Duplicate identifiers ----
+# Multiple columns in "names_from"
+
+# To take info from multiple columns for making
+     # a new, wider dataset, we can pass multiple
+     # names to "names_from"
+# The new column names are separated by an underscore
+     # by default and the names are affected
+     # by the order we list the variables
+
+toy1long %>%
+     pivot_wider(names_from = c(trt, time),
+                 values_from = measurement)
+
+# With 3 rows and 6 columns of values, 
+     # we still have our 18 original pieces of information
+
+# We can the separator with "names_sep"
+# We can change the names of the columns by changing
+     # the order we list them
+toy1long %>%
+     pivot_wider(names_from = c(time, trt),
+                 values_from = measurement,
+                 names_sep = ".")
+
+# Non-unique row identifiers ----
 # If the rows in your dataset aren't uniquely identified,
-	# you will get an error message
+	# you will get warning messages in pivot_wider()
 
-# For example, if we were trying to spread a dataset that
+# For example, if we were trying to widen a dataset that
 	# only had the "trt" column but not the "indiv" column,
 	# our rows wouldn't be uniquely identified
 
@@ -901,74 +899,34 @@ spread(toy1long, key = time, value = measurement)
 toy1long %>%
 	select(-indiv)
 
-# Look what happens if we try to spread this dataset
+# Look what happens if we try to widen this dataset
 toy1long %>%
-	select(-indiv) %>% 
-	spread(key = time, value = measurement)
+     select(-indiv) %>% 
+     pivot_wider(names_from = time, 
+                 values_from = measurement)
 
-# In my experience, getting this error message
-	# usually means it is time to step back
-	# and think about what I am trying to do and why
+# In particular take note of the warning messages
+# These give useful information about what is going on
 
-# It may be that we need to do some other data manipulation
-	# before spreading the dataset into a wide format
+# The output dataset looks odds because all three values
+     # for each trt and time were kept and put in a list
 
-# Let's see what that would look like
-# If we want to use the no "indiv" dataset, we possibly
-	# want to summarize the dataset so we have a single 
-	# row for each "trt" and "time" combination before
-	# putting it into a wide format
-# For example, we could average the measurements 
-	# within treatments for each time
+# It is likely we want to summarize over the multiple
+     # values, which we can do with the "values_fn" argument
+# One of the messages was indicating this
 
-# This involves grouping and then summarizing
+# I'll calculate the mean of the values 
+     # while widening into multiple columns
+
 toy1long %>%
-	select(-indiv) %>%
-	group_by(trt, time) %>%
-	summarise( measurement = mean(measurement) )
+     select(-indiv) %>% 
+     pivot_wider(names_from = time, 
+                 values_from = measurement,
+                 values_fn = list(measurement = mean) )
 
-# Now our rows are uniquely identified by trt and time,
-    # so we can use spread()
-# Notice I ungrouped prior to spreading so
-    # the result is no longer grouped
-toy1long %>%
-	select(-indiv) %>%
-	group_by(trt, time) %>%
-	summarise( measurement = mean(measurement) ) %>%
-    ungroup() %>%
-	spread(key = time, value = measurement)
-
-
-# Using unite() for tidying a dataset via tidyr ----
-
-# There are other functions that might come up
-	# when reshaping via tidyr
-# We certainly can't cover them all here,
-	# but here is one more example
-
-# If we wanted to have the combination of
-	# two columns as the new variable names in "spread",
-	# you could use unite() as an intermediate step
-
-# In unite() we name the new column we are creating
-	# and then list the columns that contain
-	# the values we want to *unite* together
-toy1long %>%
-	unite(col = "trt_time", trt, time)
-
-# By default the original columns are removed from the dataset 
-	# and the separator (via "sep" is an underscore)
-# Both these things can be changed; see the help page
-
-# Once the columns are united, we can spread()
-toy1long %>%
-	unite(col = "trt_time", trt, time) %>%
-	spread(key = trt_time, value = measurement)
-
-# The complement of unite() is separate(),
-	# which comes in handy when you need to gather
-	# many columns of different types
-# We won't cover this function today
+# Since we've summarized over some of the data,
+     # we now only have 6 pieces of info instead
+     # of the original 18
 
 # Practice problem 3 ----
 # Reshaping
@@ -1025,10 +983,6 @@ numbaby_76_17
 	# we can easily join these together
 
 # Let's make two toy datasets that reflect such a situation
-# This time I'll skip the step of making each variable
-	# a separate vector
-# This helps keeps our workspace from getting
-	# cluttered with temporary objects
 
 # The first dataset is the counts of some organism in 
 	# each plot within a site
@@ -1043,15 +997,15 @@ set.seed(16) # If we set the seed, we will all get the same random numbers gener
 # This dataset is slightly unbalanced, as site 3
 	# doesn't have the "c" treatment count
 ( tojoin1 = data.frame(site = rep(1:3, each = 3, length.out = 8),
-			   treat = rep(c("a", "b", "c"), length.out = 8),
-			   count = rpois(8, 6) ) )
+                       treat = rep(c("a", "b", "c"), length.out = 8),
+                       count = rpois(8, 6) ) )
 
 # This dataset is also slightly unbalanced,
 	# missing the elevation measurement from
 	# site 3 treatment "a"
 ( tojoin2 = data.frame(site = rep(1:3, length.out = 8),
-			   treat = rep(c("b", "c", "a"), each = 3, length.out = 8),
-			   elev = rgamma(8, 1000, 1) ) )
+                       treat = rep(c("b", "c", "a"), each = 3, length.out = 8),
+                       elev = rgamma(8, 1000, 1) ) )
 
 
 # Using an inner join ----
@@ -1128,7 +1082,7 @@ full_join( tojoin1, tojoin2, by = c("site", "treat") )
 # Think about adding a variable that is measured
 	# at the site level to our abundance dataset
 ( tojoin3 = data.frame(site = 1:3,
-				 rainfall = rgamma(3, 10, 1) ) )
+                       rainfall = rgamma(3, 10, 1) ) )
 
 # Each treatment plot within a site should have
 	# the same amount of rainfall,
@@ -1189,7 +1143,6 @@ tojoin1 %>%
 	# the dot placeholder, .
 tojoin1 %>% 
 	anti_join( tojoin2, ., by = c("site", "treat") )
-
 
 
 # Examples of a couple more dplyr functions ----
