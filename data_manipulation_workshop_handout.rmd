@@ -212,7 +212,7 @@ summarise_all(bycyl, .funs = mean)
 
 We won't always want to summarize every column in a dataset, for reasons including having a mix of variable types.  One option to only summarize some of the variables is to use `summarise_at()`, where we can list a subset of the columns that we want summaries for by name in the `.vars` argument.
 
-If you look at the help page, you can see that we list the variables we want to summarize within `vars()` as the second argument before defining the function we want summarize with.
+You can list the variables to summarize within `vars()`.
 
 ```{r}
 summarise_at(bycyl, .vars = vars(disp, wt), .funs = mean)
@@ -242,19 +242,21 @@ summarise_if(bycyl, .predicate = is.numeric, .funs = mean)
 
 If we want to summarize many variables with multiple functions, we pass all the functions we want to the `.funs` argument in a `list()`.  The functions are listed with commas between them.
 
-For example, maybe we want to calculate both the mean and the maximum for all numeric variables by group.  The functions we use are `mean` and `max`.  
+For example, maybe we want to calculate both the mean and the maximum for all numeric variables by group.  The functions we use are `mean()` and `max()`.  
 
-While the only example we see today is using `summarise_if`, this can be done in any of the `summarise_*` functions.
+While the only example we see today is using `summarise_if()`, this can be done in any of the `summarise_*` functions.
 
 ```{r}
-summarise_if( bycyl, .predicate = is.numeric, 
+summarise_if( bycyl, 
+              .predicate = is.numeric, 
               .funs = list(mean, max) )
 ```
 
 Notice that we get `fn1` and `fn2` appended to the variable name when using multiple functions.  To control what name is appended you can assign names to each function within the `list()`.
 
 ```{r}
-summarise_if( bycyl, .predicate = is.numeric, 
+summarise_if( bycyl, 
+              .predicate = is.numeric, 
               .funs = list(mn = mean, mx = max) )
 ```
 
