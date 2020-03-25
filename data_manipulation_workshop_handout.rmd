@@ -59,7 +59,7 @@ The RStudio cheat sheets may also be helpful: https://www.rstudio.com/resources/
 ### Check package version
 
 The current version of **dplyr** is 0.8.3 and the current version of **tidyr** is 1.0.2.  
-You can use `packageVersion` to check for the currently installed version of a package.  Make sure you using current versions of both packages.
+You can use `packageVersion()` to check for the currently installed version of a package.  Make sure you using current versions of both packages.
 
 ```{r packagevers}
 packageVersion("dplyr")
