@@ -1,0 +1,268 @@
+---
+title: "Joining two datasets"
+output: 
+  learnr::tutorial:
+       progressive: TRUE
+       allow_skip: TRUE
+       ace_theme: "crimson_editor"
+runtime: shiny_prerendered
+description: "Using dplyr to combine two datasets via a join."
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(dplyr)
+knitr::opts_chunk$set(error = TRUE, exercise.eval = FALSE)
+
+# Objects used later
+set.seed(16)
+tojoin1 = data.frame(site = rep(1:3, each = 3, length.out = 8),
+                       treat = rep(c("a", "b", "c"), length.out = 8),
+                       count = rpois(8, 6) )
+tojoin2 = data.frame(site = rep(1:3, length.out = 8),
+                       treat = rep(c("b", "c", "a"), each = 3, length.out = 8),
+                       elev = rgamma(8, 1000, 1) )
+tojoin3 = data.frame(site = 1:3,
+                       rainfall = rgamma(3, 10, 1) )
+```
+
+## Introduction
+
+Merging or *joining* two datasets is an important data manipulation technique to know.  This tutorial introduces you to the join functions from package **dplyr**. 
+
+This tutorial covers:    
+* Inner joins  
+* Left joins  
+* Full joins  
+* Data checking with the "anti" join  
+
+###
+
+### Check package version 
+
+The current version of **dplyr** in March 2020 is 0.8.3.  If doing this tutorial on your own version of R you need to make sure you have this version or newer.
+
+You can use function `packageVersion()` to check for the currently installed version of a package.  If your package version is old, close this tutorial, reinstall the package using `install.packages("dplyr")`, and then start again.
+
+```{r package-vers, exercise = TRUE}
+packageVersion("dplyr")
+```
+
+Once you have an up-to-date version of **dplyr**, load the package.  You're ready to get started!
+
+```{r dplyr, exercise = TRUE, message = FALSE, warning = FALSE}
+library(dplyr)
+```
+
+## Datasets to join
+
+Joining is the process of combining two datasets based on matching values in the columns you are using as the *unique identifiers*.  The unique identifier variables are the variables in the dataset that tells the computer which rows in one dataset should be matched to the rows in another dataset.
+
+You will be practicing joins with two small datasets.  These are very small versions of some not-uncommon natural resources datasets, where data are collected at different "sites" that each had a different "treatment" applied.  You can identify a unique location based on the `site` and the `treatment`.  These variables are the *unique identifiers* of a location.
+
+###
+
+The first dataset, which is named `tojoin1`, is a dataset with 8 rows.  The quantitative variable of interest is a `count`. The `site` and `treatment` variables are present to uniquely identify each observation
+
+You should note that treatment `c` is missing from site `3`.
+
+```{r tojoin1}
+tojoin1
+```
+
+###
+
+The second dataset, `tojoin2`, is also a dataset with 8 rows.  You can see that `elevation` was also measured at the same site-treatment combinations, but the data was stored in a different dataset.
+
+In this dataset, note that treatment `a` is missing from site `3`.
+
+```{r tojoin2}
+tojoin2
+```
+
+## The inner join
+
+You'll start practicing joining these two datasets with an *inner join* using function `inner_join()`.  An *inner join* matches on the unique identifiers and returns only rows that are shared in both datasets.
+
+Every join in **dplyr** involves two datasets that need to be joined, referred to as `x` and `y`.  The `x` dataset is the first dataset you give to the join function you are using and the `y` dataset is the second.  If working in your own R session, you can check the join help page using `?join` to see a description of each type of join available in **dplyr**.
+
+In the code examples below, `tojoin1` will be the `x` dataset and `tojoin2` is the `y` dataset.
+
+### 
+
+From the documentation, an `inner_join()` will
+
+> return all rows from x where there are matching values in y, and all columns from x and y
+
+By default, `inner_join()` joins on all columns shared by the two datasets.  When you use this default, you will get a message telling you which variables were used for joining when we run the code. 
+
+```{r innerjoin1, exercise = TRUE, paged.print = FALSE}
+inner_join(tojoin1, tojoin2)
+```
+
+### 
+
+To make your code more explicit and easily understandable, use the `by` argument to define which variables you want to join on.  This is good coding practice. You no longer get a message about the joining variables because you explicitly defined them.
+
+```{r innerjoin2, exercise = TRUE, paged.print = FALSE}
+inner_join( tojoin1, tojoin2, by = c("site", "treat") )
+```
+
+You can see that the joined dataset only has 7 rows.  This is because there are only 7 site-treatment combinations that are present in both datasets.  If you want to retain more rows you'll need a different kind of join.
+
+## The left join
+
+A left join is used when you want to keep all rows in the `x` dataset regardless of if they have a match in the `y` dataset.
+
+From the documentation, a `left_join()` will
+
+> return all rows from x, and all columns from x and y. Rows in x with no match in y will have NA values in the new columns.
+
+In the scenario you're working with, you should get 8 rows back because we have 8 rows in `tojoin1`.  The `elevation` for site `3` treatment `c` is `NA`, since there was no elevation collected at that location.  The resulting dataset is missing a row for site `3` treatment `a`, since this combination is not present in `tojoin1`.
+
+```{r leftjoin, exercise = TRUE}
+left_join( tojoin1, tojoin2, by = c("site", "treat") )
+```
+
+###
+  
+### 
+
+A `right_join()` is very similar to a `left_join()` but it returns rows present in the `y` dataset.  
+
+Based on the code you saw for `left_join()`, fill in the code below to join `tojoin1` and `tojoin2` using `right_join()`.  How many rows do you end up with?  Which row is missing?
+
+```{r rightjoin, exercise = TRUE}
+right_join()
+```
+
+```{r rightjoin-solution}
+right_join( tojoin1, tojoin2, by = c("site", "treat") )
+```
+
+## The full join
+
+To keep all rows in both datasets regardless of whether there is a match in the other dataset you can make a *full* join via `full_join()`.
+
+The `full_join()` function will
+
+> return all rows and all columns from both x and y. Where there are not matching values, returns NA for the one missing.
+
+Using a full join returns a dataset with a row for all nine site-treatment combinations that are present in both datasets.  Missing values are filled with `NA`.
+
+```{r fulljoin, exercise = TRUE}
+full_join( tojoin1, tojoin2, by = c("site", "treat") )
+```
+
+## Matching multiple rows when joining
+
+There is an important sentence in the documentation that describes joins that you haven't seen yet.
+
+> If there are multiple matches between x and y, all combination of the matches are returned.
+
+This is important behavior to understand, as sometimes you will want this behavior but other times this behavior will uncover a mistake in your joining logic.
+
+### 
+
+### An example of useful multiple row matching
+
+For example, say you had a third dataset that contained a variable that was only measured at the `site` level.  The dataset `tojoin3` contains site-level information for `rainfall`.  Rainfall did not vary among the treatment plots at each site.
+
+```{r multmatch1}
+tojoin3
+```
+
+###
+
+Since rainfall doesn't among treatment plots, you will want every treatment plot in `tojoin1` to be assigned the same value of the `rainfall` site-level variable when joining the datasets together.  Each row in the site-level dataset `tojoin3` will be matched to *multiple rows* in the count dataset `tojoin1`, which is what exactly what you want to happen.  You end up with an 8 row dataset.
+
+Note the `by` argument now lists only `site`, since this is the variable you are joining by.
+
+```{r multmatch2, exercise = TRUE}
+left_join(tojoin1, tojoin3, by = "site")
+```
+
+### Unexpected results
+
+This multiple row matching behavior can cause unexpected results  If you join the two original datasets using only `site` instead of both `site` and `treatment` (i.e., the unique identifiers), you will end up with multiple matches per row.  This leads to a dataset that is much longer than expected that contains duplicate rows.  
+
+When this sort of thing happens unexpectedly, you likely need to step back and evaluate whether or not you have unique identifiers in your dataset.  You may need to rethink what you are doing versus what you want the final dataset to look like.  An important red flag for this is having more rows in the output than you expected.
+
+```{r multmatch3, exercise = TRUE}
+left_join(tojoin1, tojoin2, by = "site")
+```
+
+## Using `anti_join()` to find missing data
+
+The very last function you'll learn today is `anti_join()`.  Both `anti_join()` and the related `semi_join()` act more like filters than joins.
+
+An `anti_join()` will
+
+> return all rows from x where there are not matching values in y, keeping just columns from x.
+
+This is a great tool for figuring out which rows are missing matches between two datasets.  In an anti-join, you want to return only the values in the `x` dataset that are *not* in the `y` dataset.  
+
+Here's what this looks like, pulling out the row in `tojoin1` that is missing from `tojoin2`.  You can quickly see you are missing treatment `a` at site `3` in `tojoin` but that you have data for that location in `tojoin2`.
+
+```{r anti, exercise = TRUE}
+anti_join( tojoin1, tojoin2, by = c("site", "treat") )
+```
+
+###
+  
+###
+  
+What if you wanted to find the row in `tojoin2` that is missing in `tojoin1`?  Fill in the code below that will allow you to do this.
+
+```{r antipractice, exercise = TRUE}
+anti_join()
+```
+<!-- <div id="antipractice-hint"> -->
+<!-- **Hint:** Think about which dataset should be `x` and which should be `y`. -->
+<!-- </div> -->
+```{r antipractice-solution}
+anti_join( tojoin2, tojoin1, by = c("site", "treat") )
+```
+
+## Join functions with the pipe
+
+The join functions can be used with the pipe operator, `%>%`. You can only pipe in one dataset at a time, so you have to decide if you want to pipe the dataset in as the `x` dataset or the `y` dataset.
+
+Piping in a `join` function isn't super useful for these simple examples, but you can easily fit a join into a longer pipe chain like you saw if you did the "Part 1" of the data manipulation tutorials.
+
+If piping a dataset in as the `x` dataset, the piped-in dataset is the first argument of whatever `join` function you are using.  This example uses the `anti_join()`.
+
+```{r pipejoin, exercise = TRUE}
+tojoin1 %>% 
+	anti_join( tojoin2, by = c("site", "treat") )
+```
+
+###
+
+###
+
+You can pipe the dataset as the `y` dataset, as well, using the `.` placeholder.
+
+```{r pipejoin2, exercise = TRUE}
+tojoin1 %>% 
+	anti_join( tojoin2, ., by = c("site", "treat") )
+```
+  
+###
+
+For one final bit of practice, use a pipe to do an inner join of `tojoin2` and `tojoin3`, piping `tojoin3` in as the `y` dataset.
+
+```{r pipejoin3, exercise = TRUE}
+
+```
+
+```{r pipejoin3-solution}
+tojoin3 %>%
+     inner_join(tojoin2, ., by = "site")
+```
+
+<!-- <div id="pipejoin3-hint"> -->
+<!-- **Hint:** Don't forget that `tojoin3` doesn't have a `treatment` variable! -->
+<!-- </div> -->
+
+That ends this joining tutorial.  Go forth and join! :)

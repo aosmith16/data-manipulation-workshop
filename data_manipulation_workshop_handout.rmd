@@ -1043,7 +1043,7 @@ For example, if we wanted to join a variable that was only measured at the "site
                        rainfall = rgamma(3, 10, 1) ) )
 ```
 
-This new dataset only has 3 rows.  Every treatment plot in the count dataset needs to be assigned to the same value of the `rainfall` site-level variable.  So each row in the site-level dataset will be matched to multiple rows in the count dataset when we join, which is what we want.  We end up with 8 rows.
+This new dataset only has 3 rows.  Every treatment plot in the count dataset `tojoin1` needs to be assigned to the same value of the `rainfall` site-level variable.  This means each row in the site-level dataset will be matched to multiple rows in `tojoin1` when joined, which is exactly what we want to happen.  We end up with an 8 row dataset.
 
 ```{r multmatch2}
 left_join(tojoin1, tojoin3, by = "site")
@@ -1051,7 +1051,7 @@ left_join(tojoin1, tojoin3, by = "site")
 
 ### An example of when this indicates a mistake
 
-This sort of behavior can cause unexpected results, though.  If we join our original two joining datasets using only `site` instead of both the variables that make up the unique identifier of each row, we will end up with multiple matches per row.  This leads us with a dataset that is much longer than expected.  
+This sort of behavior can cause unexpected results, though.  If we join the original two joining datasets using only `site` instead of the two variables that make up the unique identifier of each row, we will end up with multiple matches per row.  This leads us with a dataset that is much longer than expected.  
 
 When this sort of thing happens unexpectedly, we likely need to step back and evaluate whether or not we have unique identifiers.  We may need to rethink what we are doing versus what we want the final dataset to look like.
 
