@@ -1,0 +1,289 @@
+---
+title: "Reshaping data"
+output: 
+  learnr::tutorial:
+       progressive: TRUE
+       allow_skip: TRUE
+       ace_theme: "crimson_editor"
+runtime: shiny_prerendered
+description: "Using tidyr to reshape your data."
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(tidyr)
+library(dplyr)
+library(babynames)
+knitr::opts_chunk$set(error = TRUE, exercise.eval = FALSE)
+
+# Objects used later
+toy1 = data.frame(indiv = rep(1:3, times = 2),
+                    trt = rep( c("a", "b"), each = 3),
+                    time1 = rnorm(n = 6),
+                    time2 = rnorm(n = 6),
+                    time3 = rnorm(n = 6) )
+
+toy1long = toy1 %>%
+     pivot_longer(cols = time1:time3,
+                  names_to = "time",
+                  values_to = "measurement")
+
+numbaby_76_17 = babynames %>%
+    filter( year %in% c(1976, 2017) ) %>%
+    group_by(year, sex) %>%
+    summarise(n = n() ) %>%
+    ungroup()
+```
+
+## Introduction
+
+In this tutorial you are going to learn about how to *reshape* datasets in R using functions from package **tidyr**.
+
+This tutorial covers:    
+* Making a *wide* dataset long with `pivot_longer()`  
+* Making a *long* dataset wide with `pivot_wider()`  
+* Summarizing when reshaping  
+
+The language on wide and long datasets may be new to you, and what this language means should become clear as you work through the tutorial.
+
+###
+ 
+### Check package version 
+
+The current version of **tidy** in March 2020 is 1.0.2.  If doing this tutorial on your own version of R you need to make sure you have this version or newer.
+
+You can use function `packageVersion()` to check for the currently installed version of a package.  If your package version is old, close this tutorial, reinstall the package using `install.packages("tidyr")`, and then start again.
+
+```{r package-vers, exercise = TRUE}
+packageVersion("tidyr")
+```
+
+Once you have an up-to-date version of **tidyr**, load this package along with package **dplyr**.  You're ready to get started!
+
+```{r tidyr, exercise = TRUE, message = FALSE, warning = FALSE}
+library(tidyr)
+library(dplyr)
+```
+
+## The dataset to reshape
+
+The dataset you will be using in reshaping exercises today is named `toy1`.  This dataset is in a *wide* format.  It has 6 rows and 5 columns.
+
+* `indiv` are the 6 individuals that had measurements taken on them through time.  Individuals were not given unique names; i.e., individual `1` in treatment `a` is a separate individual from individual `1` in treatment `b`.  
+
+* `trt` are two different treatments that individuals were assigned to.  
+
+* Columns `time1`, `time2`, and `time3` contain some quantitative measurement that was measured on the individuals at three different times.
+
+Note that this dataset has 18 pieces of quantitative information (6 rows * 3 columns).
+
+```{r toy1}
+toy1
+```
+
+###
+
+###
+
+The `toy1` example shows one common approach for storing time series data.  However, in many analyses in R you would not want to have the measurements from three different time periods stored in three different columns.  Instead, you would want to have a single column that contained all the quantitative measurements as well as a column that contained the information on the time of measurement: you would need to *reshape* the data prior to analysis.
+
+In this case, reshaping the dataset involves taking a *wide* dataset, where data are stored in multiple columns, and making it *long*, where the same data are stored in multiple rows.  You can use the `pivot_longer()` function to *lengthen* a dataset from wide to long.
+
+## Wide to long with `pivot_longer()`
+
+The **tidyr** package was built to be used with pipes, and so the dataset to reshape is the first argument for its functions. Review tutorial 1 if you are not familiar with pipes yet.
+
+After defining the dataset you want to reshape in `pivot_longer()` you list the columns that contain the values you want to be combined into a single column using the `cols` argument.  The three columns to combine in the example dataset are `time1`, `time2`, and `time3`.
+
+###
+
+###
+
+You can use the `select_helpers` you learned in tutorial 1 to select the columns.  For example, any of the following code examples can be used to select the three `time` columns:  
+`cols = time1:time3`  
+`cols = starts_with("time")`  
+`cols = c(-indiv, -trt)`
+
+###
+
+In addition to selecting the columns to combine you will need to choose a name for the new "grouping" column in the long dataset using `names_to`.  This column will be a categorical variables that contains the names of the columns you are combining.  When naming a column like this you need to use a *string*, meaning the name you choose needs to be given in quotes.
+
+Finally, you need to name the new column of values using `values_to`.  This is also done using a string.
+
+In this example, the new grouping column is named `time` and the new values column is named `measurement`.  The output is named `toy1long`.
+
+```{r long1, exercise = TRUE}
+toy1long = toy1 %>%
+     pivot_longer(cols = time1:time3,
+                  names_to = "time",
+                  values_to = "measurement")
+toy1long
+```
+
+The `toy1long` dataset is in *long* format, which has the same amount information as in the original.  It contains 18 quantitative values, now stored in a single column.  You changed the shape of the dataset, not the underlying data.
+
+## Long to wide with `pivot_wider()`
+
+Now you can use the function `pivot_wider()` to *widen* the long dataset `toy1long` back to its original format.  You might want to do this if, for example, you were going to take a dataset from an analysis done in R to graph in a program like SigmaPlot.
+
+###
+
+###
+
+In the `pivot_wider()` function, you use the pair of arguments `names_from` and `values_from` after defining the dataset you want to reshape.  
+
+The `names_from` argument is where you list the column that contains the values you will use as the new column names.  You are referring to an existing column, so this can be done with *bare* names (i.e., without quotes around the variable names).
+
+You list the column that contains the values to fill the new columns with using `values_from`.   
+
+```{r wide1, exercise = TRUE}
+toy1long %>%
+     pivot_wider(names_from = time,
+                 values_from = measurement)
+```
+
+## Multiple `names_from` columns
+
+In some cases you'll want to make a wide dataset with new column names based on multiple variables from the long dataset.  In that case you can pass multiple variable names to `names_from`.
+
+By default, the new column names will have an underscore (`_`) in them separating the information from the two variables.  The new column names are based on the order the variables are listed in `names_from`.
+
+Here is an example, using both `trt` and `time` as the `names_from` variables.
+
+```{r extrawide2, exercise = TRUE}
+toy1long %>%
+	pivot_wider(names_from = c(trt, time),
+	            values_from = measurement)
+```
+
+The result is 3 row dataset with quantitative values stored in 6 columns: it still has the original 18 pieces of information that are now stored in an extra-wide format.
+
+###
+
+###
+
+You can change the symbol used in the new column names with `names_sep`.  In the code below, the `names_from` columns are listed in a different order.
+
+```{r extrawide3, exercise = TRUE}
+toy1long %>%
+	pivot_wider(names_from = c(time, trt),
+	            values_from = measurement,
+	            names_sep = ".")
+```
+
+You can also list multiple `values_from` columns to put two widen two different sets of values simultaneously.  This is not covered in this tutorial, but see the `usrentincome` example in the `Examples` section of the help page at `?pivot_wider()`.
+
+## Non-unique row identifiers
+
+If the rows of the long dataset aren't uniquely identified when converting into a wide format you will get a warning message from `pivot_wider()`.
+
+For example, if you were trying to spread `toy1long` but you only had the `trt` variable and not the `indiv` variable the rows wouldn't be uniquely identified.  It is only the combination of `trt`, `indiv`, and `time` that uniquely identifies a row.
+
+In this exercise, `indiv` will be removed from the dataset using `select()` from package **dplyr**.
+
+```{r notunique}
+toy1long %>%
+       select(-indiv)
+```
+
+###  
+
+###
+
+You now have multiple observations of each time for each `trt` category; the rows are not uniquely identified.  Take a look at what happens when you use `pivot_wider()` on this dataset without changing the previous code.  
+
+In particular, take a look at the warning messages.  These messages contain useful information about what is in the output and why.  The output dataset looks pretty different than what you've seen before because all 3 values for each `trt` and `time` were kept but were placed into lists.
+
+```{r notunique2, exercise = TRUE, exercise.setup = "long1"}
+toy1long %>%
+       select(-indiv) %>% 
+       pivot_wider(names_from = time, 
+                   values_from = measurement)
+```
+
+###
+
+If you really want to widen the dataset without `indiv`, you most likely want to summarize over the values for each `trt` and `time`.  This can be done using the `values_fun` argument.   This is what the message
+
+> Use `values_fn = list(measurement = summary_fun)` to summarise duplicates
+
+was telling you.
+
+For example, you can calculate the mean of the values in each `trt` and `time` using `values_fn` with `list(measurement = mean)`.
+
+```{r notunique3, exercise = TRUE, exercise.setup = "long1"}
+toy1long %>%
+       select(-indiv) %>% 
+       pivot_wider(names_from = time, 
+                   values_from = measurement,
+                   values_fn = list(measurement = mean) )
+```
+
+When you summarize over multiple values you *do* change the total number of values in the dataset.  The output now has only 6 quantitative values.
+
+## Practice reshaping
+
+Time for some practice!
+
+This practice will be based on a dataset named `numbaby_76_17`.  This dataset is one you learned to make in tutorial 1.  It is in a long format, with the total number of baby names for each `year` and `sex` listed in a single column called `n`.
+
+```{r baby}
+numbaby_76_17
+```
+
+###
+
+###
+
+Reshape the `numbaby_76_17` dataset to a wide format.  Make a dataset with a separate column for each `sex` containing the number of baby names in a given `year`.  
+
+```{r prac1, exercise = TRUE}
+numbaby_76_17 %>%
+     pivot_wider()
+```
+
+```{r prac1-solution}
+numbaby_76_17 %>%
+    pivot_wider(names_from = sex, 
+                values_from = n)
+```
+
+###
+
+Now reshape the same dataset to different wide format.  Make a dataset with a separate column for each `year` containing the number of baby names in a given `sex`.
+
+```{r prac2, exercise = TRUE}
+numbaby_76_17 %>%
+     pivot_wider()
+```
+
+```{r prac2-solution}
+numbaby_76_17 %>%
+    pivot_wider(names_from = year, 
+                values_from = n)
+```
+
+###
+
+Finally, practice putting the wide dataset with a separate column for each `sex` back into its original format.  Name the single quantitative column `num_name`.
+
+This can involve assigning a name when creating the wide dataset or using `pivot_longer()` after `pivot_wider()`.
+
+```{r prac3, exercise = TRUE}
+numbaby_76_17 %>%
+     pivot_wider() %>%
+     pivot_longer()
+```
+
+```{r prac3-solution}
+numbaby_76_17 %>%
+    pivot_wider(names_from = sex, 
+                values_from = n) %>%
+    pivot_longer(cols = F:M,
+                 names_to = "sex", 
+                 values_to = "num_name")
+```
+
+###
+
+This is the end of the reshaping tutorial.  The final tutorial in this series is about *joining* two datasets together.

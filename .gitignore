@@ -3,3 +3,4 @@
 .RData
 .Ruserdata
 tutorials/*.html
+rsconnect/

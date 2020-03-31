@@ -1,0 +1,772 @@
+---
+title: "Data manipulation basics"
+output: 
+  learnr::tutorial:
+       progressive: TRUE
+       allow_skip: TRUE
+       ace_theme: "crimson_editor"
+       df_print: "default"
+runtime: shiny_prerendered
+description: "Using dplyr for basic data manipulation."
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(dplyr)
+library(babynames)
+knitr::opts_chunk$set(error = TRUE, exercise.eval = FALSE)
+
+# Objects used later
+byam.cyl = group_by(mtcars, cyl, am)
+```
+
+## Introduction
+
+This tutorial will take you through some basic data manipulation techniques using package **dplyr**.  At the end you will have a chance to practice some of the functions you learned. 
+
+This tutorial covers:    
+* Making summary datasets by group  
+* Filtering the dataset to include only rows that satisfy certain conditions  
+* Selecting only some columns/variables in a dataset  
+* Adding new variables/columns  
+* Sorting datasets based on variables  
+
+###
+ 
+### Check package version 
+
+The current version of **dplyr** in March 2020 is 0.8.3.  If doing this tutorial on your own version of R you need to make sure you have this version or newer.
+
+You can use function `packageVersion()` to check for the currently installed version of a package.  If your package version is old, close this tutorial, reinstall the package using `install.packages("dplyr")`, and then start again.
+
+```{r package-vers, exercise = TRUE}
+packageVersion("dplyr")
+```
+
+Once you have an up-to-date version of **dplyr**, load the package.  You're ready to get started!
+
+```{r dplyr, exercise = TRUE, message = FALSE, warning = FALSE}
+library(dplyr)
+```
+
+## The `mtcars` dataset
+
+You will be using the `mtcars` dataset to practice data manipulation.  This dataset comes with R, and information about this dataset is available in the R help files for the dataset (`?mtcars`).
+
+You will see both categorical and continuous variables from this dataset, including:  
+`mpg` (Miles per US gallon),  
+`wt` (car weight in 1000 lbs),  
+`cyl` (number of cylinders),  
+`am` (type of transmission),  
+`disp` (engine displacement),  
+`qsec` (quarter mile time), and  
+`hp` (horsepower).    
+
+###
+
+###
+
+Take a quick look at the first six lines (with `head()`) and structure (with `str()`) of this dataset so you know what it looks like.  You should recognize that `cyl` and `am` (as well as others like `vs`) are categorical variables.  However, they are considered numeric variables in the dataset since the categories are expressed with numbers.
+
+```{r head-mtcars, exercise = TRUE, paged.print = TRUE}
+head(mtcars)
+```
+
+```{r str-mtcars, exercise = TRUE}
+str(mtcars)
+```
+
+## Summary statistics by group
+
+The first topic is calculating summary statistics by group.  The tutorial starts here because this is common task folks struggle with in R.  The task of calculating summaries by groups in R is referred to as a *split-apply-combine* task because you want to split the dataset into groups, apply a function to each split, and then combine the results back into a single dataset.
+
+###
+
+### Using the `group_by()` function
+
+With **dplyr**, the key to split-apply-combine tasks is *grouping*.  You need to define which variable contains the groups that you want separate summaries for.  You create a grouped dataset using the `group_by()` function. 
+
+In `group_by()` you first list the dataset you want to group and then the variables you want to group on.  The grouped dataset `bycyl` below is the `mtcars` dataset grouped on the `cyl` variable.  The `cyl` variable is a categorical variable representing the number of cylinders a car has.  This variable has 3 different levels, `4`, `6`, and `8`.
+
+
+```{r group1}
+bycyl = group_by(mtcars, cyl)
+```
+
+```{r group}
+# Setup chunk won't be seen
+bycyl = group_by(mtcars, cyl)
+```
+
+###
+
+You can see that the new `bycyl` object is a grouped dataset if it has a `Groups` tag when you print it.  The grouping variable or variables are listed in the `Groups`. 
+
+```{r group-head, exercise = TRUE, exercise.setup = "group"}
+head(bycyl)
+```
+
+###
+
+A grouped dataset will also have the class `grouped_df` in its.  The variable(s) used for grouping are listed at the bottom of the structure.
+
+```{r group-str, exercise = TRUE, exercise.setup = "group"}
+str(bycyl)
+```
+
+### Using the `summarise()` function
+
+Now that you have the grouped dataset, `bycyl`, you can use it with the `summarise()` function to calculate summary statistics by group.  Note that `summarize()` is an alternative spelling for the same function.  
+
+You'll start by calculating the mean engine displacement for each cylinder category.  Notice that the first argument of `summarise()` is the dataset you want to summarize.  In this case, the grouped dataset `bycyl`.  Having the dataset as the first argument of functions is a common theme for **dplyr** functions.  
+
+Once you've defined the dataset, you list a summary function and variable you want summarized as the second argument.  Here you'll calculate the mean engine displacement.
+
+```{r summarise, exercise = TRUE, exercise.setup = "group"}
+summarise( bycyl, mean(disp) )
+```
+
+### Summarizing multiple variables
+
+You can summarize multiple variables or use different summary functions at once in `summarise()` by using commas to separate each new function/variable. 
+
+For example, you can calculate the mean of engine displacement and horsepower by cylinder category in the same function call.
+
+```{r summarise2, exercise = TRUE, exercise.setup = "group"}
+summarise( bycyl, mean(disp), mean(hp) )
+```
+
+### Naming the variables
+
+The default names for the new variables are sufficient for a quick summary but are not particularly convenient if you wanted to use the result for anything further in R.  You can set variable names while making new variables in `summarise()`.  
+
+Here you'll calculate the mean and standard deviation of engine displacement by cylinder category and name the new variables `mdisp` and `sdisp`, respectively.
+
+```{r summarise3, exercise = TRUE, exercise.setup = "group"}
+summarise( bycyl, mdisp = mean(disp), sdisp = sd(disp) )
+```
+
+### Grouping a dataset by multiple variables
+
+Datasets can be grouped by multiple variables as well as by a single variable.  This is common for studies with multiple factors of interest or with nested studies designs (e.g., plots nested in transects nested in sites). 
+
+Grouping a dataset by multiple variables involves listing additional variables separated by a comma.  Here is what it looks like to group `mtcars` by both `cyl` and `am` (transmission type).
+
+```{r twogroups1}
+byam.cyl = group_by(mtcars, cyl, am)
+```
+
+```{r twogroups}
+# Setup chunk won't be seen
+byam.cyl = group_by(mtcars, cyl, am)
+```
+
+###
+
+For practice, finish the code below to calculate the mean engine displacement using the `byam.cyl` dataset.  Name the new variable `mdisp`.
+
+In the output you will see the mean engine displacement is calculated for every factor combination, for a total of six rows (3 `cyl` categories and 2 `am` categories).
+
+```{r twogroups-mean, exercise = TRUE, exercise.setup = "twogroups"}
+summarise( byam.cyl,  )
+```
+
+```{r twogroups-mean-solution}
+summarise( byam.cyl,  mdisp = mean(disp) )
+```
+
+You can see that this dataset is still grouped by `cyl` since that variable is still listed in `Groups`.  This brings up the concept of *ungrouping*.
+
+### Ungrouping a dataset
+
+Once you are finished with any grouped data manipulation, it is best practice to *ungroup* the dataset.  Trying to work with a dataset that is grouped when you don't want it to be can lead to unexpected and confusing behavior.  It is safest to make sure the final version of a dataset is ungrouped.
+
+Ungrouping is done via the `ungroup()` function.  Notice there are no longer have any `Groups` listed in the output once you do this, as the result is no longer grouped by any variables.
+
+```{r ungroup, exercise = TRUE, exercise.setup = "twogroups"}
+ungroup( summarise( byam.cyl, mdisp = mean(disp) ) )
+```
+
+## Summarizing many variables at once
+
+When you want to summarize many variables in a dataset using the same function, you can use one of the *scoped variants* of `summarise()`.  The scoped variants are `summarise_all()`, `summarise_at()`, and `summarise_if()`.
+
+*Note: These scoped functions will still be available but will be superseded by `across()` in dplyr 1.0.0, which will be released in 2020.*
+
+###
+
+### `summarise_all()`
+
+The `summarise_all()` function is useful when you want to summarize every non-grouping variable in the dataset with the same function.  You give the function you want to use for the summaries as the second argument, `.funs`.  
+
+You can see how `summarise_all()` works by calculating the mean of every variable in `mtcars` for each cylinder category.
+
+```{r summarise-all, exercise = TRUE, paged.print = TRUE, exercise.setup = "group"}
+summarise_all(bycyl, .funs = mean)
+```
+
+###
+
+Note that you need to be careful with `summarise_all()`.  You can have problems if trying to summarize both continuous and categorical variables in a single dataset and could end up with an error.  All the variables in `mtcars` are currently numeric.  Look what happens if you make one of the variables a factor and then take the mean of every variable. 
+
+R still does the averaging, but returns `NA` and warning messages for the factor variable, `vs`.
+
+```{r summarise-all_fac, exercise = TRUE, paged.print = TRUE, exercise.setup = "group"}
+bycyl$vs = factor(bycyl$vs)
+
+summarise_all(bycyl, .funs = mean)
+```
+
+### `summarise_at()`
+
+You won't always want to summarize every column in a dataset, for reasons such as having a mix of variable types.  One option to only summarize some of the variables is to use `summarise_at()`, where you can list a subset of the columns that you want summaries for by name in the `.vars` argument.
+
+You can list the variables to summarize within the `vars()` function.
+
+```{r summarise-at, exercise = TRUE, paged.print = TRUE, exercise.setup = "group"}
+summarise_at(bycyl, .vars = vars(disp, wt), .funs = mean)
+```
+
+###
+
+You can drop out the variables you don't want summarized rather than writing out the ones you do want.  For example, while all the variables in `mtcars` are read as numeric, some are actually categorical.  If you don't want to treat them as continuous, you can drop them prior to summarizing.  This is done using the minus sign with the variable names inside `vars()`.  
+
+You will learn more about selecting and dropping specific variables later in the tutorial when you learn the `select()` function.
+
+```{r summarise-at-min, exercise = TRUE, paged.print = TRUE, exercise.setup = "group"}
+summarise_at(bycyl, .vars = vars(-am, -vs), .funs = mean)
+```
+
+### `summarise_if()`
+
+If you want to choose the columns you want to summarize using a logical *predicate* function, use `summarise_if()`.  The predicate function you want to use is passed to the the second argument of the function, `.predicate`.
+
+This next example shows summarizing only the numeric variables by using the predicate function `is.numeric()`.  R checks if a column is numeric with `is.numeric()` and if the result is `TRUE` a summary of the column is made.  If the result is `FALSE`, the variable is dropped from the output.
+
+In this example, all variables except `vs` are numeric and will be summarized.
+
+```{r summarise-if, exercise = TRUE, paged.print = TRUE, exercise.setup = "group"}
+bycyl$vs = factor(bycyl$vs)
+
+summarise_if(bycyl, .predicate = is.numeric, .funs = mean)
+```
+
+### Using multiple functions in the scoped variants
+
+If you want to summarize many variables with multiple functions, you can pass all the functions you want to the `.funs` argument within `list()`.  The functions are listed with commas between them.
+
+For example, maybe you want to calculate both the mean and the maximum for all numeric variables by group.  The functions you list be name as `mean` and `max`.  
+
+While the only example you will see today is using `summarise_at()`, this can be done in any of the scoped variants of the `summarise()` function.
+
+```{r mult-funs, exercise = TRUE, exercise.setup = "group"}
+summarise_at(bycyl, 
+             .vars = vars(-am, -vs), 
+             .funs = list(mean, max) )
+```
+
+###
+
+You'll notice that `fn1` and `fn2` were appended to the variable name when using multiple functions.  To control what name is appended you can assign names to each function within the `list()`.  In this example, `mn` is added to the mean columns and `mx` to the max columns.
+
+```{r mult-funs-names, exercise = TRUE, exercise.setup = "group"}
+summarise_at(bycyl, 
+             .vars = vars(-am, -vs),
+             .funs = list(mn = mean, mx = max) )
+```
+
+### The `glimpse()` function for examining wide datasets
+
+The **dplyr** package truncates how much of the dataset you see printed in R.  For very wide datasets like the one you just created, you can get a better idea of what the result looks like using `glimpse()`.
+
+```{r glimpse, exercise = TRUE, exercise.setup = "group"}
+glimpse( summarise_at(bycyl, 
+             .vars = vars(-am, -vs),
+             .funs = list(mn = mean, mx = max) ) )
+```
+
+## Filtering rows
+
+The next data manipulation task you will learn about is *filtering*.  Filtering is about how many rows you want to keep in the dataset, not about the number of columns.  It involves making specific subsets of your data by removing unwanted rows.  Rows to keep are chosen based on *logical conditions*.
+
+###
+
+###
+
+For example, maybe you want to focus on a subset of the dataset that only involves cars with automatic transmissions.  You can do this with the `filter()` function to *filter* the `mtcars` dataset to only those rows where `am` is `0`.  
+
+Like other **dplyr** functions, the dataset is the first argument in `filter()`. The subsequent arguments are the conditions that the filtered dataset should meet.  Here, the condition is that cars must have automatic transmissions, or `am == 0` (note the *two* equals signs).
+
+```{r filter, exercise = TRUE}
+filter(mtcars, am == 0)
+```
+
+###
+
+The `filter()` function will always be used with logical operators such as, e.g.,:
+* `==`, testing for equality  
+* `!=`, testing for inequality  
+* `<`, less than  
+* `>=`, greater than or equal to  
+* `is.na`, all `NA` values  
+* `!is.na`, all values except `NA`),  etc.
+
+If you wanted to filter out all cars that weigh more than 4000 lbs (i.e., 4 1000 lbs), you can keep only the rows where `wt <= 4` using `filter().
+
+```{r filter2, exercise = TRUE}
+filter(mtcars, wt <= 4)
+```
+
+###
+
+You could achieve the same thing by choosing everything that is *not* greater than 4, `!wt > 4`.  The exclamation point, `!`, is the *not* operator.
+
+```{r filter3, exercise = TRUE}
+filter(mtcars, !wt > 4)
+```
+
+### Filtering grouped datasets
+
+You can filter grouped datasets, and the condition will be applied separately to each group.  For example, maybe you want to keep only the rows where `wt` is greater than its cylinder category group mean.  
+
+In this example you are filtering the grouped dataset `bycyl`.
+
+```{r filtergroup, exercise = TRUE, exercise.setup = "group"}
+filter( bycyl, wt > mean(wt) )
+```
+
+### Filtering by multiple conditions
+
+And, of course, you can filter datasets by multiple conditions at once.  If you wanted to filter `mtcars` to only cars with automatic transmission (`am == 0`) *and* that have weights less than or equal to 4000 lbs (`wt <= 4`), you can include both conditions in `filter()` separated by a comma.  
+
+```{r filtermult, exercise = TRUE}
+filter(mtcars, am == 0, wt <= 4)
+```
+
+While you won't see it today, if you need a logical *OR* statement you will need the `|` symbol, found on the backslash key on your keyboard.
+
+### Scoped variants of `filter()`
+
+The **dplyr** package has `filter_all()`, `filter_at()`, and `filter_if()` verbs available.  These would be useful if you wanted to apply the same filter to many columns of data.
+
+These are often used in combination with the functions `any_vars()` or `all_vars()`.  The `Examples` section of the help page is a good place to see some code examples using these.
+
+## Selecting columns
+
+Keeping only a subset of the columns of a dataset is referred to as *selecting variables*.  Selecting only some columns could be for organizational reasons, where an analysis is focused on only some of many variables and so you want to create a dataset that contains only the variables of interest.  This can also be useful when saving some final table and you want to remove nonrelevant variables.  
+
+Selecting variables is about how many columns you want to keep, not how many rows you have.
+
+### 
+
+###
+
+The **dplyr** function `select()` is a tool for selecting columns.  You can keep or drop variables by index number, but most often you will use variable names in `select()`.  
+
+In the `select()` function, after defining the dataset as the first argument you can list the variables you want to keep.  Below is an example, keeping only the `cyl` column from `mtcars`.
+
+```{r select, exercise = TRUE}
+select(mtcars, cyl)
+```
+
+###
+
+If you wanted to keep all variables between (and including) `cyl` and `vs`, you use a colon, `:`, between the variable names.
+
+```{r select2, exercise = TRUE}
+select(mtcars, cyl:vs)
+```
+
+###
+
+If you want to keep only a few columns, you can list each variable name separately with a comma between them.  Here is an example of selecting only `cyl` and `vs`.
+
+```{r select3, exercise = TRUE}
+select(mtcars, cyl, vs)
+```
+
+## Helper functions to select variables
+
+The `select()` function has several special functions to make selecting some set of variables easier.  See the help page for `select_helpers` for a list of all of these (`?select_helpers`). 
+
+These special functions include `starts_with()`, `contains()`, and `ends_with()`, among others.  Such functions can be very useful if you have coded your variables names so that related variables contain the same letters or numbers.
+
+###
+
+###
+
+Here is an example using `starts_with()`, where you select all variables with names that *start with* a lowercase `d`.  Remember that R is case sensitive, so an uppercase `D` is different than a lowercase `d`.
+
+```{r select4, exercise = TRUE}
+select( mtcars, starts_with("d") )
+```
+
+###
+
+You can also keep all variables that *contain* a lowercase `a` anywhere in the variable name using `contains()`.
+
+```{r select5, exercise = TRUE}
+select( mtcars, contains("a") )
+```
+
+###
+
+So far you've seen examples of choosing variables to keep, but you could also choose variables to drop like in the `summarise_at()` example. Variables are dropped using the minus sign (`-`).
+
+Here the `gear` variable is dropped.
+
+```{r select6, exercise = TRUE}
+select(mtcars, -gear)
+```
+
+###
+
+Try filling in the code below to drop both the `gear` and `carb` variables.
+
+```{r select7, exercise = TRUE}
+select(mtcars, ) 
+```
+
+```{r select7-solution, echo = FALSE}
+select(mtcars, -gear, -carb)
+```
+
+###
+
+To drop all variables between and including `am` and `carb` you can use the colon again.  Notice that parentheses are needed around the variables to use `-` like this.
+
+```{r select8, exercise = TRUE}
+select( mtcars, -(am:carb) ) 
+```
+
+###
+
+Finally, you can drop variables that end with the letter "t" by combining `-` with the helper function `ends_with()`.
+
+```{r select9, exercise = TRUE}
+select( mtcars, -ends_with("t") ) 
+```
+
+###
+
+The `select_helpers` can be used in other functions, as well.  We would commonly use them in the scoped `*_at()` functions like `summarise_at()` to help pick the variables to use within the function.  The `select()` function also has scoped variants available, `select_all()`, `select_at()`, and `select_if()`.
+
+## Creating new variables
+
+The `mutate()` function in **dplyr** can be used to create new variables and add them to the dataset as new columns.  The new variable must be the same length as the current dataset.  In other words, the new variables must have the same number of rows as the original dataset.  You will practice making some new variables and adding them to `mtcars` to illustrate how this works.
+
+###
+
+###
+
+As with the other **dplyr** functions, the dataset is the first argument of `mutate()`.  The other arguments are the variables you want to make.  This is extremely similar to how the `summarise()` functions works.
+
+You'll start by making a new variable called `disp.hp`, which is the sum of engine displacement (`disp`) and horsepower (`hp`).
+
+```{r mutate, exercise = TRUE}
+mutate(mtcars, disp.hp = disp + hp)
+```
+
+###
+
+You can make multiple new variables at once, separating each new variable by a comma like you did in `summarise()`.  
+
+A handy feature of `mutate()` is that you can work directly with the new variables you made within the same function call.  For example, you can first calculate `disp.hp` and then calculate a second variable that is half of `disp.hp` (`disp.hp` divided by 2).  
+
+You can create many variables in `mutate()`, so you'll calculate the ratio of `qsec` and `wt`, as well.  Since adding three more variables makes a wide dataset, the new `qw` column may show below the rest of the data in the output in the tutorial.
+
+```{r mutate2, exercise = TRUE}
+mutate(mtcars, 
+       disp.hp = disp + hp,
+       halfdh = disp.hp/2,
+       qw = qsec/wt)
+```
+
+### Using `mutate()` with grouped datasets
+
+You can work with grouped datasets when using `mutate()`.  This is useful when you want to add a column of a summary statistic for each group to the existing dataset rather than making a summary dataset.  
+
+###
+
+Here you'll create and add a new variable that is the mean horsepower for each cylinder category.  Each row within a cylinder category will have the same value of mean horsepower, since `mutate()` always returns a new dataset that is the same length as the original.  
+
+This operation is done on the grouped dataset `bycyl`.  
+
+```{r mutate3, exercise = TRUE, exercise.setup = "group"}
+mutate( bycyl, mhp = mean(hp) )
+```
+
+###
+
+While you will not see examples today, there are scoped variants of `mutate()`.  The `mutate_all()`/`mutate_at()`/`mutate_if()` functions are available that work much like the scoped variants of the `summarise()` function you saw earlier.  
+
+There is also a function called `transmute()`, which creates new variables that are the same length as the current dataset like `mutate()` but only returns the new variables like `summarise()`.  This can be very useful in some settings.
+
+## Sorting
+
+There are some situations where you might want to sort your dataset by variables within the dataset.  For example, if you want to pull out the first observation in each group from a time series you might sort the dataset first by time within each group prior to filtering.  You can sort datasets with **dplyr** using the `arrange()` function.
+
+###
+
+###
+
+You'll start by sorting `mtcars` by `cyl`.  By default you sort whatever variable you are sorting on from low to high (*ascending* order).  The first argument in `arrange()` is the dataset, followed by the variable to sort by.
+
+```{r arrange, exercise = TRUE}
+arrange(mtcars, cyl)
+```
+
+###
+
+To sort datasets by variables in *descending* order (highest to lowest), use the minus sign (`-`) or the function `desc()`.  The `desc()` function is part of **dplyr**.
+
+```{r arrange2, exercise = TRUE}
+arrange(mtcars, -cyl)
+```
+
+```{r arrange3, exercise = TRUE}
+arrange( mtcars, desc(cyl) )
+```
+
+###
+
+To sort variables only within groups, you must sort by the grouping variable first and then the other sorting variables.  The `arrange()` function ignores `group_by()`.  This is different than all the other **dplyr** verbs you've learned today.
+
+Here's an example of within-group sorting, sorting each cylinder category from lowest to highest `wt`.  Note multiple sorting variables are listed with commas between them.  The first one listed is the first one used in sorting.
+
+```{r arrange4, exercise = TRUE}
+arrange(mtcars, cyl, wt)
+```
+
+To sort by more variables, keep adding them in `arrange()`, separated by commas.
+
+## The pipe to combine tasks
+
+When working with your own datasets you'll often want to do multiple data manipulation tasks in a row.  Now that you've learned how to do different kinds of data manipulation it is time to learn how to string them together.  
+
+###
+
+### Options for combining tasks
+
+There are three main options for combining data manipulation tasks when using **dplyr** functions.
+
+1.  Make temporary objects.  In this option you assign a name to each new object.  
+2.  Nesting functions.  In this option you *nest* functions within other functions to avoid making temporary objects.
+3.  Use the pipe operator to string each step together.
+
+The full workshop PDF gives examples of the first two options.  Here the focus will be on the last option, using the pipe operator.
+
+### The pipe operator
+
+The pipe operator is the symbol `%>%`, used in **dplyr** but imported from the **magrittr** package.  The pipe allows you to perform a series of data manipulation steps in a long *chain* while avoiding making many temporary objects and difficult-to-read nested code.  
+
+In essence, the pipe operator *pipes* a dataset into a function as the first argument.  This is a reason that the dataset is the first argument in **dplyr** functions.
+
+###
+
+You can think of the pipe as being pronounced "then", which will make more sense once you see some examples. 
+
+Here's a simple example to get you started.  Remember when you grouped `mtcars` by `cyl` at the beginning of the tutorial?
+
+```{r nopipe}
+bycyl = group_by(mtcars, cyl)
+```
+
+This simple code is read "inside out".  You can see that you are grouping with `group_by()` and then if you read inside the function you see the dataset you want to group.  
+
+###
+
+Here's the same code using the pipe.  The object is assigned the same name, `bycyl`.
+
+```{r pipe}
+bycyl = mtcars %>% group_by(cyl)
+```
+
+The code with the pipe is read from left to right.  You see you are working with the `mtcars` dataset and *then* that you are grouping that dataset by `cyl`.  The result is the same, but the code itself looks different.
+
+###
+
+Handily, you can keep piping through multiple functions in a  chain.  When working with pipes in a chain, it is standard to use a line break after each pipe with an indent for each subsequent function.  Line breaks and plenty of spaces makes your code more readable to others (including your future self).
+
+In the next exercise you'll group `mtcars` by `cyl` and then calculate the mean `disp` of each group.
+
+```{r pipe1, exercise = TRUE}
+mtcars %>%
+	group_by(cyl) %>%
+	summarise( mdisp = mean(disp) )
+```
+
+This code is read from left to right.  You see you are going to work with `mtcars`, then you group it by `cyl`, and then you calculate the mean `disp` of the grouped dataset.  When you read it like this you can see why the pipe is described as being pronounced *then*.
+
+### Combining more data manipulation tasks
+
+Now it's time to use the pipe to combine more tasks.  Here's what you'll do:
+
+1. Filter the `mtcars` dataset to only those cars with automatic transmissions with `filter()`.  
+2. Create a new variable that is the ratio of engine displacement and horsepower with `mutate()`.  
+3. Calculate the mean of this new variable separately for each cylinder category with `group_by()` and `summarise()`.  
+
+Comments are added in the code below so you can see what each step is for.
+
+```{r pipe2, exercise = TRUE}
+mtcars %>%
+	filter(am == 0) %>% # filter out the manual transmission cars
+	mutate(hd.ratio = hp/disp) %>% # make new ratio variable
+	group_by(cyl) %>% # group by number of cylinders
+	summarise(mratio = mean(hd.ratio) ) # calculate mean hd.ratio per cylinder category
+```
+
+###
+
+You can still assign names to the objects from the start, which can look like this.  Note I'm using `=` for assignment but you'll often see `<-`.
+
+```{r pipe3}
+sum.ratio = mtcars %>%
+	filter(am == 0) %>% # filter out the manual transmission cars
+	mutate(hd.ratio = hp/disp) %>% # make new ratio variable
+	group_by(cyl) %>% # group by number of cylinders
+	summarise(mratio = mean(hd.ratio) ) # calculate mean hd.ratio per cylinder category
+```
+
+### The pipe operator with non-**dplyr** functions
+
+The pipe operator can be used with functions outside the **dplyr** package, as well.  If the first argument of the function is the dataset, the code looks like the pipe code you've seen so far.  
+
+For example, you can use the pipe with the `head()` function from base R and get the first 10 rows of `mtcars`.  The first argument of the `head()` function is the dataset.
+
+```{r head, exercise = TRUE}
+mtcars %>% 
+     head(n = 10)
+```
+
+### Piping a dataset to later arguments
+
+If the first argument of a function is *not* the dataset you can use the dot, `.`, to represent the dataset name in the function you are piping into.  You can see this below, using the pipe with the `t.test()` function.  This function does not have `data` as the first argument.  
+
+In the example code you are testing for a difference in mean horsepower among transmission types based on the `mtcars` dataset.  The dataset is piped to the `data` argument with the `.`.
+
+```{r ttest1, exercise = TRUE}
+mtcars %>% 
+     t.test(hp ~ am, data = .)
+```
+
+###
+
+You generally wouldn't use piping in the very simple case of using `t.test()` on a full dataset.  A more realistic example is if you wanted to filter the dataset before doing the test.  
+
+Here you'll filter `mtcars` to cars weighing less than or equal to 4000 lbs and then test if mean horsepower is different between transmission types.
+
+```{r ttest2, exercise = TRUE}
+mtcars %>% 
+	filter(wt <= 4) %>% 
+	t.test(hp ~ am, data = .)
+```
+
+## Tallying the number of rows
+
+Before moving to the practice problems there is one more useful function you will want to see.  The **dplyr** package has a built-in function, `n()`, for counting up the unique rows in a group.  This is useful when making tables of summary statistics.
+
+In this example, `mtcars` is grouped by `cyl` and then the number of rows in each category is calculated.  Other summary statistics, such as the the mean of engine displacement, can be calculated at the same time.
+
+```{r n, exercise = TRUE}
+mtcars %>%
+	group_by(cyl) %>%
+	summarise( n = n(),
+	           mdisp = mean(disp) )
+```
+
+Other useful functions that are related to `n()` are `count()` and `tally()` which can tally by groups in fewer steps.  Take a look at the help page for those to see how they work.
+
+## Practice data manipulation
+
+You've now covered a lot of material on data manipulation functions.  Now it's time to practice what you've learned.  
+
+The two practice problems are based on the `babynames` dataset.  This dataset is in package **babynames** version `1.0.0`.  If you are running the tutorial in your own R version and do not have this package or it is not up to date you will need to install it.  You can do this with the RStudio Packages pane Install button, or run the code `install.packages("babynames")` after closing the tutorial.
+
+```{r packagevers2, exercise = TRUE}
+packageVersion("babynames")
+```
+
+Once the package is installed, load the package before starting the practice problems below.
+
+```{r babynames, exercise = TRUE}
+library(babynames)
+```
+
+###
+
+###
+
+The help page for `babynames` will give some basic information on the dataset.  Use `?babynames` to see the help page in R after loading the package.
+
+The `babynames` dataset contains data from the United States Social Security Administration on the number and proportion of babies given a name each year from 1880 through 2017.  Rare names (recorded less than 5 times) are excluded from the dataset in R.  The annual proportion of babies given a name was calculated separately for male and female babies (`sex`).
+
+The dataset has five variables, shown below.
+
+```{r glimpsebaby, exercise = TRUE}
+head(babynames)
+```
+
+### Practice problem 1
+
+> **Which name was given to the largest number of babies in the year you were born?**  
+
+The first problem can be solved with filtering and sorting.
+
+```{r prob1, exercise = TRUE}
+babynames %>%
+     
+```
+
+```{r prob1-solution}
+babynames %>%
+    filter(year == 1976) %>%
+    arrange(-n)
+```
+
+The solution shows an example for someone born in 1976.
+
+###
+
+Given the name you discovered above, answer the following question.
+
+> **How many babies were given that name in 2017?**  
+
+This can be done by filtering with multiple conditions.  Depending on the name from step 1, you may end up with an answer for each `sex`.
+
+```{r prob1-2, exercise = TRUE}
+babynames %>%
+     
+```
+
+```{r prob1-2-solution}
+babynames %>%
+    filter(year == 2017, name == "Michael")
+```
+
+### Practice problem 2
+
+The second practice problem involves filtering, grouping, and then summarizing the number of rows per group.  Don't forget to `ungroup()`!
+
+> **Calculate the total number of baby names for each level of the `sex` variable in the year you were born and in 2017.**   
+
+**Hint:** To use `filter()` with multiple values you'll need `%in%` instead of `==`.  For example, if you wanted to filter to the years 1980 and 2015 you'd use `year %in% c(1980, 2015)` for the condition in `filter()`.
+
+```{r prob2, exercise = TRUE}
+babynames %>%
+     
+```
+
+```{r prob2-solution}
+babynames %>%
+    filter( year %in% c(1976, 2017) ) %>%
+    group_by(year, sex) %>%
+    summarise(n = n() ) %>%
+    ungroup()
+```
+
+The solution is for someone born in 1976.
+
+###
+
+This is the end of this tutorial.  There are two more tutorials in this series.  The second tutorial involves *reshaping* a dataset and the third tutorial is about *joining* two datasets.  These two tutorials are much shorter than this one.

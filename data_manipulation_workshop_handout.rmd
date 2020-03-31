@@ -440,7 +440,7 @@ In **dplyr**, we can use `mutate()` to create new variables and add them to the 
 
 Let's start by making a new variable called `disp.hp`, which is the sum of engine displacement (`disp`) and horsepower (`hp`).
 
-As with the other **dplyr** functions, the dataset is the first argument of `mutate`.
+As with the other **dplyr** functions, the dataset is the first argument of `mutate()`.
 
 ```{r mutate, eval = FALSE}
 mutate(mtcars, disp.hp = disp + hp)
@@ -496,7 +496,7 @@ arrange(mtcars, cyl)
 as.tbl( arrange(mtcars, cyl) )
 ```
 
-To sort datasets by variables in descending order (highest to lowest), we can use the minus sign (`-`) or the function `desc` (which is from **dplyr**).
+To sort datasets by variables in descending order (highest to lowest), we can use the minus sign (`-`) or the function `desc()` (which is from **dplyr**).
 
 ```{r arrange3, eval = FALSE}
 arrange(mtcars, -cyl)
@@ -514,7 +514,7 @@ arrange( mtcars, desc(cyl) )
 as.tbl( arrange( mtcars, desc(cyl) ) )
 ```
 
-To sort variables only within groups, we sort by the grouping variable first and then the other sorting variables.  The `arrange()` function ignores `group_by`; this is different than all the other **dplyr** verbs we've learned today.
+To sort variables only within groups, we sort by the grouping variable first and then the other sorting variables.  The `arrange()` function ignores `group_by()`; this is different than all the other **dplyr** verbs we've learned today.
 
 Here's an example of within-group sorting, sorting each cylinder category from lowest to highest `wt`.  
 
@@ -589,7 +589,7 @@ Let's start with a simple example.  Remember when we grouped `mtcars` by `cyl` e
 bycyl = group_by(mtcars, cyl)
 ```
 
-We read even this simple code "inside out".  We see that we are grouping with `group_by` and then if we read inside the function we see the dataset we are going to group.  Let's write this same code using the pipe.
+We read even this simple code "inside out".  We see that we are grouping with `group_by()` and then if we read inside the function we see the dataset we are going to group.  Let's write this same code using the pipe.
 
 ```{r}
 bycyl = mtcars %>% group_by(cyl)
@@ -638,7 +638,8 @@ sum.ratio = mtcars %>%
 The pipe operator can be used with functions outside the **dplyr** package, as well.  If the first argument of the function is the dataset, the code looks exactly like what we've been doing.  For example, we can use the pipe with the `head()` function from base R and get the first 10 rows of `mtcars`.  The first argument of the `head()` function is the dataset.
 
 ```{r}
-mtcars %>% head(n = 10)
+mtcars %>% 
+     head(n = 10)
 ```
 
 If the first argument of a function is *not* the dataset, we need to use the dot, `.`, to represent the dataset name in the function we are piping into.  We can see this if we use the pipe operator with the `t.test()` function, which doesn't have `data` as the first argument.  
@@ -646,7 +647,8 @@ If the first argument of a function is *not* the dataset, we need to use the dot
 Here we test for a difference in mean horsepower among transmission types based on the `mtcars` dataset.  The dataset is piped to the `data` argument with the `.`.
 
 ```{r}
-mtcars %>% t.test(hp ~ am, data = .)
+mtcars %>% 
+     t.test(hp ~ am, data = .)
 ```
 
 We generally wouldn't use piping in such a simple case, though, as we would use the data argument in `t.test()` directly.  A more realistic example is if we wanted to filter the dataset before doing the test.  
@@ -666,8 +668,11 @@ Before we move on, I want to talk about one more function.  The **dplyr** packag
 ```{r n}
 mtcars %>%
 	group_by(cyl) %>%
-	summarise( n = n() )
+	summarise( n = n(),
+	           mdisp = mean(disp) )
 ```
+
+Other useful functions that are related to `n()` are `count()` and `tally()` which can tally up number of rows per group in fewer steps.  Take a look at the help page for those to see how they work.
 
 This function can be used directly inside other functions, such as `filter()`, for removing rows based on the group total count.  I'll keep on the rows of the dataset of `cyl` groups that have fewer than 10 observations.  It turns out that this is true only for the `6` group.
 
@@ -837,7 +842,7 @@ toy1long %>%
                  values_from = measurement)
 ```
 
-### Using multiple columns in `names_from`.
+### Using multiple columns in `names_from`
 
 In some cases we'll want to make a wide dataset with new column names based on multiple variables in the long dataset.  In that case we can pass multiple variable names to `names_from`.
 

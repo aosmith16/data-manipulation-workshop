@@ -650,7 +650,8 @@ mtcars %>%
 # This is so useful when making tables of summary statistics
 mtcars %>%
     group_by(cyl) %>%
-    summarise( n = n() )
+    summarise( n = n(),
+               mdis = mean(disp) )
 
 # We can also use it directly in, e.g., filter() or mutate(),
     
