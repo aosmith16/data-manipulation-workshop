@@ -28,6 +28,10 @@ tojoin3 = data.frame(site = 1:3,
 
 ## Introduction
 
+```{r hex, echo = FALSE, out.width = "100px"}
+knitr::include_graphics(path = "https://raw.githubusercontent.com/rstudio/hex-stickers/master/PNG/dplyr.png")
+```
+
 Merging or *joining* two datasets is an important data manipulation technique to know.  This tutorial introduces you to the join functions from package **dplyr**. 
 
 This tutorial covers:    

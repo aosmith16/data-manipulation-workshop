@@ -17,6 +17,11 @@ opts_chunk$set(comment = NA, tidy = FALSE, dev = "pdf")
 
 # Introduction and background
 
+```{r hex, echo = FALSE, out.width = "100px"}
+knitr::include_graphics("hex_dplyr.png")
+knitr::include_graphics("hex_tidyr.png")
+```
+
 Today we are going to be learning how to perform basic data manipulation tasks in R.  While there are many options for tackling data manipulation problems in R (e.g., `apply` family, **data.table** package, functions `ave()` and `aggregate()`), we will be working with the **dplyr** and **tidyr** packages today.  I find that these packages are approachable for people without a lot of programming background but are still quite fast when working with large datasets.
 
 In this workshop, we will cover the following:

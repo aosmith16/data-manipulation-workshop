@@ -22,6 +22,10 @@ byam.cyl = group_by(mtcars, cyl, am)
 
 ## Introduction
 
+```{r hex, echo = FALSE, out.width = "100px"}
+knitr::include_graphics(path = "https://raw.githubusercontent.com/rstudio/hex-stickers/master/PNG/dplyr.png")
+```
+
 This tutorial will take you through some basic data manipulation techniques using package **dplyr**.  At the end you will have a chance to practice some of the functions you learned. 
 
 This tutorial covers:    

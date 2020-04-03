@@ -37,6 +37,10 @@ numbaby_76_17 = babynames %>%
 
 ## Introduction
 
+```{r hex, echo = FALSE, out.width = "100px"}
+knitr::include_graphics(path = "https://raw.githubusercontent.com/rstudio/hex-stickers/master/PNG/tidyr.png")
+```
+
 In this tutorial you are going to learn about how to *reshape* datasets in R using functions from package **tidyr**.
 
 This tutorial covers:    
