@@ -16,3 +16,5 @@ The workshop covers how to:
 Along the way students learn how to use the pipe operator to chain several data manipulation steps together. Students have time to practice data manipulation and reshaping using the `babynames` dataset from package **babynames**.
 
 I provide an R script that we'll run code from during the workshop as well as  a PDF document.  The PDF is a written version of the workshop, including code and output, to be used as a reference.
+
+The workshop material is also available as a series of three interactive tutorials using package **learnr**.  You can see instructions for how to download and run those [here](https://ariel.rbind.io/workshop/datamanip/#interactive-tutorials).
